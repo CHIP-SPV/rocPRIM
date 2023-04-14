@@ -310,7 +310,7 @@ add_rocprim_test("rocprim.device_partition" test_device_partition.cpp)
 # GPU: CL_OUT_OF_RESOURCES at build time.
 # CPU: segfault
 # Crashes in llvm-spirv's switch..case validation during rocPRIM build.
-# add_rocprim_test_parallel("rocprim.device_radix_sort" test_device_radix_sort.cpp.in)
+add_rocprim_test_parallel("rocprim.device_radix_sort" test_device_radix_sort.cpp.in)
 
 # GPU: warning: kernel _ZN7rocprim6detail13reduce_by_key6kernelINS1_14default_configILj0EiiEEPiS5_S5_S5_PjNS_8equal_toIiEENS_4plusIiEENS0_19lookback_scan_stateINS_5tupleIJjiEEELb0ELb0EEEEEvT0_T1_T2_T3_T4_T6_T5_T7_NS0_16ordered_block_idIjEEmm  compiled SIMD8 allocated 128 regs and spilled around 49 (CL_OUT_OF_RESOURCES)
 # CPU: hipErrorOutOfMemory (Allocation size exceeds limits for a single allocation) in /home/pjaaskel/src/chip-spv/src/CHIPBackend.cc:1110:allocate
