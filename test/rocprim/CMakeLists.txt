@@ -417,3 +417,7 @@ set_tests_properties(
   PROPERTIES
   LABELS "chip-spv-cpu"
 )
+
+# This define is needed for CHIP-SPV because of atomicAdd for unsigned long,
+# which is not documented in HIP programmer's manual:
+add_compile_definitions(CHIP_ENABLE_NON_COMPLIANT_DEVICELIB_CODE=1)
