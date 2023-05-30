@@ -59,11 +59,9 @@ void sort_key_kernel(
     const unsigned int block_offset = blockIdx.x * items_per_block;
 
     key_type keys[ItemsPerThread];
-#ifdef __HIP_CPU_RT__
-    // TODO: check if it's really neccessary
-    // Initialize contents, as non-hipcc compilers don't unconditionally zero out allocated memory
     std::memset(keys, 0, ItemsPerThread * sizeof(key_type));
-#endif
+    __syncthreads();
+
     rocprim::block_load_direct_blocked(lid, device_keys_output + block_offset, keys);
 
     rocprim::block_radix_sort<key_type, BlockSize, ItemsPerThread> bsort;
@@ -110,8 +108,15 @@ void sort_key_value_kernel(
 
     key_type keys[ItemsPerThread];
     value_type values[ItemsPerThread];
+
+    std::memset(keys, 0, ItemsPerThread * sizeof(key_type));
+    std::memset(values, 0, ItemsPerThread * sizeof(value_type));
+
+    __syncthreads();
+
     rocprim::block_load_direct_blocked(lid, device_keys_output + block_offset, keys);
     rocprim::block_load_direct_blocked(lid, device_values_output + block_offset, values);
+
 
     rocprim::block_radix_sort<key_type, BlockSize, ItemsPerThread, value_type> bsort;
     if(to_striped)
