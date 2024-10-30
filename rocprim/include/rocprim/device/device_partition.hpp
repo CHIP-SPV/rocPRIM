@@ -265,7 +265,7 @@ hipError_t partition_impl(void * temporary_storage,
             start = std::chrono::high_resolution_clock::now();
         }
 
-        if (prop.gcnArchName == "gfx908" && asicRevision < 2)
+        if (prop.gcnArchName != nullptr && strcmp(prop.gcnArchName, "gfx908") == 0 && asicRevision < 2)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(init_lookback_scan_state_kernel<offset_scan_state_with_sleep_type>),
@@ -287,7 +287,7 @@ hipError_t partition_impl(void * temporary_storage,
 
         grid_size = current_number_of_blocks;
 
-        if (prop.gcnArchName == "gfx908" && asicRevision < 2)
+        if (prop.gcnArchName != nullptr && strcmp(prop.gcnArchName, "gfx908") == 0 && asicRevision < 2)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(partition_kernel<SelectMethod, OnlySelected, config>),
