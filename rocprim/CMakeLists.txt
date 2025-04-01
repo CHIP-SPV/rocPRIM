@@ -40,49 +40,57 @@ endif( )
 
 # Only header target, does not include dependencies
 add_library(rocprim INTERFACE)
+
+# Common include directories for both build modes
 target_include_directories(rocprim
   INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/rocprim>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/>
 )
 
-# This target links against HIP library
-add_library(rocprim_hip INTERFACE)
-target_link_libraries(rocprim_hip INTERFACE rocprim hip::device)
+# Standalone ROCm build specific setup
+if(NOT DEFINED CHIP_BUILD_ROCPRIM)
+  target_include_directories(rocprim
+    INTERFACE
+      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/>
+  )
 
+  # This target links against HIP library
+  add_library(rocprim_hip INTERFACE)
+  target_link_libraries(rocprim_hip INTERFACE rocprim hip::device)
 
-# Installation
+  # Installation - only for standalone build
+  rocm_install_targets(
+    TARGETS rocprim rocprim_hip
+  )
 
-# We need to install headers manually as rocm_install_targets
-# does not support header-only libraries (INTERFACE targets)
-rocm_install_targets(
-  TARGETS rocprim rocprim_hip
-)
-
-rocm_install(
-  DIRECTORY
-    "include/"
-    "${PROJECT_BINARY_DIR}/rocprim/include/"
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/
-  FILES_MATCHING
-  PATTERN "*.h"
-  PATTERN "*.hpp"
-  PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
-)
-
-
-if (BUILD_FILE_REORG_BACKWARD_COMPATIBILITY AND NOT WIN32)
-rocm_install(
+  rocm_install(
     DIRECTORY
-       "${PROJECT_BINARY_DIR}/rocprim/wrapper/"
-        DESTINATION rocprim/ )
-endif()
+      "include/"
+      "${PROJECT_BINARY_DIR}/rocprim/include/"
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "*.hpp"
+    PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
+  )
 
-# Export targets
-rocm_export_targets(
-  TARGETS roc::rocprim roc::rocprim_hip
-  DEPENDS PACKAGE hip
-  NAMESPACE roc::
-)
+  if (BUILD_FILE_REORG_BACKWARD_COMPATIBILITY AND NOT WIN32)
+    rocm_install(
+      DIRECTORY
+         "${PROJECT_BINARY_DIR}/rocprim/wrapper/"
+          DESTINATION rocprim/ )
+  endif()
+
+  # Export targets - only for standalone build
+  rocm_export_targets(
+    TARGETS roc::rocprim roc::rocprim_hip
+    DEPENDS PACKAGE hip
+    NAMESPACE roc::
+  )
+else()
+  # chipStar integrated build specific setup
+  # Link against chipStar's hip::device target
+  target_link_libraries(rocprim INTERFACE hip::device)
+endif()

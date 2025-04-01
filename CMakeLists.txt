@@ -62,101 +62,115 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(BUILD_SHARED_LIBS OFF) # don't build client dependencies as shared
-if(NOT USE_HIP_CPU)
-  # Get dependencies (required here to get rocm-cmake)
-  include(cmake/Dependencies.cmake)
-  # Use target ID syntax if supported for GPU_TARGETS
-  if (NOT DEFINED AMDGPU_TARGETS)
-    set(GPU_TARGETS "all" CACHE STRING "GPU architectures to compile for")
-  else()
-    set(GPU_TARGETS "${AMDGPU_TARGETS}" CACHE STRING "GPU architectures to compile for")
-  endif()
-  set_property(CACHE GPU_TARGETS PROPERTY STRINGS "all")
 
-  if(GPU_TARGETS STREQUAL "all")
-    rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
-      TARGETS "gfx803;gfx900:xnack-;gfx906:xnack-;gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx1030;gfx1100;gfx1101;gfx1102"
+# Skip ROCm-specific GPU target setup when building with chipStar
+if(NOT DEFINED CHIP_BUILD_ROCPRIM)
+  if(NOT USE_HIP_CPU)
+    # Get dependencies (required here to get rocm-cmake)
+    include(cmake/Dependencies.cmake)
+    # Use target ID syntax if supported for GPU_TARGETS
+    if (NOT DEFINED AMDGPU_TARGETS)
+      set(GPU_TARGETS "all" CACHE STRING "GPU architectures to compile for")
+    else()
+      set(GPU_TARGETS "${AMDGPU_TARGETS}" CACHE STRING "GPU architectures to compile for")
+    endif()
+    set_property(CACHE GPU_TARGETS PROPERTY STRINGS "all")
+
+    if(GPU_TARGETS STREQUAL "all")
+      rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
+        TARGETS "gfx803;gfx900:xnack-;gfx906:xnack-;gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx1030;gfx1100;gfx1101;gfx1102"
+      )
+      set(GPU_TARGETS "${DEFAULT_AMDGPU_TARGETS}" CACHE STRING "GPU architectures to compile for" FORCE)
+    endif()
+
+    # TODO: Fix VerifyCompiler for HIP on Windows
+    # if (NOT WIN32)
+    #   include(cmake/VerifyCompiler.cmake)
+    # endif()
+    list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH} ${ROCM_PATH}/hip ${ROCM_PATH}/llvm /opt/rocm/llvm /opt/rocm /opt/rocm/hip)
+    message(WARNING "HIP_DIR: ${HIP_DIR}")
+    # find_package(hip REQUIRED CONFIG PATHS ${HIP_DIR} ${ROCM_PATH} /opt/rocm)
+  endif()
+
+  # FOR HANDLING ENABLE/DISABLE OPTIONAL BACKWARD COMPATIBILITY for FILE/FOLDER REORG
+  option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" ON)
+  if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY AND NOT WIN32)
+    rocm_wrap_header_dir(
+      "${PROJECT_SOURCE_DIR}/rocprim/include/rocprim"
+      WRAPPER_LOCATIONS rocprim/include/rocprim
+      OUTPUT_LOCATIONS rocprim/wrapper/include/rocprim
+      PATTERNS *.hpp
     )
-    set(GPU_TARGETS "${DEFAULT_AMDGPU_TARGETS}" CACHE STRING "GPU architectures to compile for" FORCE)
   endif()
 
-  # TODO: Fix VerifyCompiler for HIP on Windows
-  # if (NOT WIN32)
-  #   include(cmake/VerifyCompiler.cmake)
-  # endif()
-  list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH} ${ROCM_PATH}/hip ${ROCM_PATH}/llvm /opt/rocm/llvm /opt/rocm /opt/rocm/hip)
-  message(WARNING "HIP_DIR: ${HIP_DIR}")
-  # find_package(hip REQUIRED CONFIG PATHS ${HIP_DIR} ${ROCM_PATH} /opt/rocm)
-endif()
+  if(BUILD_CODE_COVERAGE)
+    add_compile_options(-fprofile-arcs -ftest-coverage)
+    add_link_options(--coverage)
+  endif()
 
-# FOR HANDLING ENABLE/DISABLE OPTIONAL BACKWARD COMPATIBILITY for FILE/FOLDER REORG
-option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" ON)
-if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY AND NOT WIN32)
-  rocm_wrap_header_dir(
-    "${PROJECT_SOURCE_DIR}/rocprim/include/rocprim"
-    WRAPPER_LOCATIONS rocprim/include/rocprim
-    OUTPUT_LOCATIONS rocprim/wrapper/include/rocprim
-    PATTERNS *.hpp
-  )
-endif()
+  if(USE_HIP_CPU)
+    # Get dependencies
+    include(cmake/Dependencies.cmake)
+  endif()
 
-if(BUILD_CODE_COVERAGE)
-  add_compile_options(-fprofile-arcs -ftest-coverage)
-  add_link_options(--coverage)
-endif()
+  # Setup VERSION
+  set(VERSION_STRING "2.10.9")
+  rocm_setup_version(VERSION ${VERSION_STRING})
 
-if(USE_HIP_CPU)
-  # Get dependencies
+  # Print configuration summary
+  include(cmake/Summary.cmake)
+  print_configuration_summary()
+else()
+  # Include dependencies minimally for chipStar build
+  # Need ROCM cmake modules for rocprim subdirectory
   include(cmake/Dependencies.cmake)
 endif()
-
-# Setup VERSION
-set(VERSION_STRING "2.10.9")
-rocm_setup_version(VERSION ${VERSION_STRING})
-
-# Print configuration summary
-include(cmake/Summary.cmake)
-print_configuration_summary()
 
 # rocPRIM library
 add_subdirectory(rocprim)
 
-if(NOT ONLY_INSTALL AND (BUILD_TEST OR BUILD_BENCHMARK))
-  rocm_package_setup_component(clients)
-endif()
+# Skip test/benchmark/example setup when building with chipStar
+add_subdirectory(test)
+if(NOT DEFINED CHIP_BUILD_ROCPRIM)
+  if(NOT ONLY_INSTALL AND (BUILD_TEST OR BUILD_BENCHMARK))
+    rocm_package_setup_component(clients)
+  endif()
 
-# Tests
-if(BUILD_TEST AND NOT ONLY_INSTALL)
-  rocm_package_setup_client_component(tests)
-  enable_testing()
-  add_subdirectory(test)
-endif()
+  # Tests
+  if(BUILD_TEST AND NOT ONLY_INSTALL)
+    rocm_package_setup_client_component(tests)
+    enable_testing()
+  endif()
 
-# Benchmarks
-if(BUILD_BENCHMARK AND NOT ONLY_INSTALL)
-  rocm_package_setup_client_component(benchmarks)
-  add_subdirectory(benchmark)
-endif()
+  # Benchmarks
+  if(BUILD_BENCHMARK AND NOT ONLY_INSTALL)
+    rocm_package_setup_client_component(benchmarks)
+    add_subdirectory(benchmark)
+  endif()
 
-# Examples
-if(BUILD_EXAMPLE AND NOT ONLY_INSTALL)
-  add_subdirectory(example)
-endif()
+  # Examples
+  if(BUILD_EXAMPLE AND NOT ONLY_INSTALL)
+    add_subdirectory(example)
+  endif()
+endif() # NOT DEFINED CHIP_BUILD_ROCPRIM
 
-# Package
-set(BUILD_SHARED_LIBS ON) # Build as though shared library for naming
-rocm_package_add_dependencies(DEPENDS "hip-rocclr >= 3.5.0")
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
-set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+# Skip packaging steps when building with chipStar
+if(NOT DEFINED CHIP_BUILD_ROCPRIM)
+  # Package
+  set(BUILD_SHARED_LIBS ON) # Build as though shared library for naming
+  rocm_package_add_dependencies(DEPENDS "hip-rocclr >= 3.5.0")
+  set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+  set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
-set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "\${CPACK_PACKAGING_INSTALL_PREFIX}" )
+  set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "\${CPACK_PACKAGING_INSTALL_PREFIX}" )
 
-rocm_create_package(
-  NAME rocprim
-  DESCRIPTION "Radeon Open Compute Parallel Primitives Library"
-  MAINTAINER "rocPRIM Maintainer <rocprim-maintainer@amd.com>"
-  HEADER_ONLY
-)
+  rocm_create_package(
+    NAME rocprim
+    DESCRIPTION "Radeon Open Compute Parallel Primitives Library"
+    MAINTAINER "rocPRIM Maintainer <rocprim-maintainer@amd.com>"
+    HEADER_ONLY
+  )
+endif() # NOT DEFINED CHIP_BUILD_ROCPRIM
 
 
 #

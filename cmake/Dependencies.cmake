@@ -24,6 +24,11 @@
 # rocPRIM dependencies
 # ###########################
 
+# Skip ROCm dependency handling when building with chipStar
+if(DEFINED CHIP_BUILD_ROCPRIM)
+  return()
+endif()
+
 # NOTE1: the reason we don't scope global state meddling using add_subdirectory
 #        is because CMake < 3.24 lacks CMAKE_FIND_PACKAGE_TARGETS_GLOBAL which
 #        would promote IMPORTED targets of find_package(CONFIG) to be visible
@@ -174,25 +179,28 @@ if(BUILD_BENCHMARK)
   endif()
 endif(BUILD_BENCHMARK)
 
-if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
-  set(CMAKE_FIND_DEBUG_MODE TRUE)
-  find_package(ROCM 0.7.3 CONFIG QUIET PATHS /opt/rocm)
-  set(CMAKE_FIND_DEBUG_MODE FALSE)
-endif()
-if(NOT ROCM_FOUND)
-  if(NOT EXISTS "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src")
-    message(STATUS "ROCm CMake not found. Fetching...")
-    set(rocm_cmake_tag "master" CACHE STRING "rocm-cmake tag to download")
-    FetchContent_Declare(
-      rocm-cmake
-      URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/${rocm_cmake_tag}.tar.gz
-    )
-    FetchContent_MakeAvailable(rocm-cmake)
+# Only search for external ROCm components if NOT building with chipStar
+if(NOT DEFINED CHIP_BUILD_ROCPRIM)
+  if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
+    set(CMAKE_FIND_DEBUG_MODE TRUE)
+    find_package(ROCM 0.7.3 CONFIG QUIET PATHS /opt/rocm)
+    set(CMAKE_FIND_DEBUG_MODE FALSE)
   endif()
-  find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH HINTS "${rocm-cmake_SOURCE_DIR}")
-else()
-  find_package(ROCM 0.7.3 CONFIG REQUIRED PATHS /opt/rocm)
-endif()
+  if(NOT ROCM_FOUND)
+    if(NOT EXISTS "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src")
+      message(STATUS "ROCm CMake not found. Fetching...")
+      set(rocm_cmake_tag "master" CACHE STRING "rocm-cmake tag to download")
+      FetchContent_Declare(
+        rocm-cmake
+        URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/${rocm_cmake_tag}.tar.gz
+      )
+      FetchContent_MakeAvailable(rocm-cmake)
+    endif()
+    find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH HINTS "${rocm-cmake_SOURCE_DIR}")
+  else()
+    find_package(ROCM 0.7.3 CONFIG REQUIRED PATHS /opt/rocm)
+  endif()
+endif() # NOT DEFINED CHIP_BUILD_ROCPRIM
 
 # Restore user global state
 set(CMAKE_CXX_FLAGS ${USER_CXX_FLAGS})
