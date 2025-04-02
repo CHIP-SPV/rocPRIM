@@ -19,6 +19,35 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+
+find_package(GTest QUIET)
+message(STATUS "GTest_FOUND: ${GTest_FOUND}")
+if(NOT GTest_FOUND)
+  include(FetchContent)
+  FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        release-1.11.0 # Or a suitable tag/commit
+  )
+  # Disable GTest install to avoid conflicts if chipStar installs things
+  set(INSTALL_GTEST OFF CACHE BOOL "")
+  FetchContent_MakeAvailable(googletest)
+  message(STATUS "Fetched GoogleTest for rocPRIM tests.")
+else()
+  message(STATUS "Found existing GoogleTest installation: ${GTEST_INCLUDE_DIRS}")
+endif()
+# Ensure targets are available globally if found via FetchContent
+# Note: This might not be strictly necessary depending on CMake version and GTest setup,
+# but helps ensure visibility.
+if(TARGET gtest AND NOT TARGET GTest::GTest)
+  add_library(GTest::GTest ALIAS gtest)
+endif()
+if(TARGET gtest_main AND NOT TARGET GTest::Main)
+  add_library(GTest::Main ALIAS gtest_main)
+endif()
+
+
 set(INSTALL_TEST_FILE "${CMAKE_CURRENT_BINARY_DIR}/install_CTestTestfile.cmake")
 file(WRITE "${INSTALL_TEST_FILE}"
 [=[
