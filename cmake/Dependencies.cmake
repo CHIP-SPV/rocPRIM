@@ -25,7 +25,8 @@
 # ###########################
 
 # Skip ROCm dependency handling when building with chipStar
-if(DEFINED CHIP_BUILD_ROCPRIM)
+if(HIP_PLATFORM STREQUAL "spirv")
+  message(STATUS "skipping rocPRIM dependency handling for SPIRV platform")
   return()
 endif()
 
@@ -181,7 +182,7 @@ endif(BUILD_BENCHMARK)
 
 if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
   set(CMAKE_FIND_DEBUG_MODE TRUE)
-  # find_package(ROCM 0.7.3 CONFIG QUIET PATHS /opt/rocm)
+  find_package(ROCM 0.7.3 CONFIG QUIET PATHS /opt/rocm)
   set(CMAKE_FIND_DEBUG_MODE FALSE)
 endif()
 if(NOT ROCM_FOUND)
@@ -194,9 +195,9 @@ if(NOT ROCM_FOUND)
     )
     FetchContent_MakeAvailable(rocm-cmake)
   endif()
-  # find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH HINTS "${rocm-cmake_SOURCE_DIR}")
+  find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH HINTS "${rocm-cmake_SOURCE_DIR}")
 else()
-  # find_package(ROCM 0.7.3 CONFIG REQUIRED PATHS /opt/rocm)
+  find_package(ROCM 0.7.3 CONFIG REQUIRED PATHS /opt/rocm)
 endif()
 
 # Restore user global state
@@ -208,11 +209,11 @@ else()
 endif()
 set(ROCM_WARN_TOOLCHAIN_VAR ${USER_ROCM_WARN_TOOLCHAIN_VAR} CACHE BOOL "")
 
-# include(ROCMSetupVersion)          // Comment out ROCm include
-# include(ROCMCreatePackage)        // Comment out ROCm include
-# include(ROCMInstallTargets)       // Comment out ROCm include
-# include(ROCMPackageConfigHelpers) // Comment out ROCm include
-# include(ROCMInstallSymlinks)      // Comment out ROCm include
-# include(ROCMHeaderWrapper)        // Comment out ROCm include
-# include(ROCMCheckTargetIds)       // Comment out ROCm include
-# include(ROCMClients)              // Comment out ROCm include
+include(ROCMSetupVersion)
+include(ROCMCreatePackage)
+include(ROCMInstallTargets)
+include(ROCMPackageConfigHelpers)
+include(ROCMInstallSymlinks)
+include(ROCMHeaderWrapper)
+include(ROCMCheckTargetIds)
+include(ROCMClients)
