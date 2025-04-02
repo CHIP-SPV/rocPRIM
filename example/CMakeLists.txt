@@ -33,7 +33,7 @@ function(add_rocprim_example EXAMPLE_SOURCE)
         rocprim_hip
     )
   else()
-    target_link_libraries(${TEST_EXAMPLE_TARGETTARGET}
+    target_link_libraries(${EXAMPLE_TARGET}
       PRIVATE
         rocprim
         Threads::Threads

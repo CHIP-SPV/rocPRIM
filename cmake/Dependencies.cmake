@@ -179,28 +179,25 @@ if(BUILD_BENCHMARK)
   endif()
 endif(BUILD_BENCHMARK)
 
-# Only search for external ROCm components if NOT building with chipStar
-if(NOT DEFINED CHIP_BUILD_ROCPRIM)
-  if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
-    set(CMAKE_FIND_DEBUG_MODE TRUE)
-    find_package(ROCM 0.7.3 CONFIG QUIET PATHS /opt/rocm)
-    set(CMAKE_FIND_DEBUG_MODE FALSE)
+if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
+  set(CMAKE_FIND_DEBUG_MODE TRUE)
+  # find_package(ROCM 0.7.3 CONFIG QUIET PATHS /opt/rocm)
+  set(CMAKE_FIND_DEBUG_MODE FALSE)
+endif()
+if(NOT ROCM_FOUND)
+  if(NOT EXISTS "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src")
+    message(STATUS "ROCm CMake not found. Fetching...")
+    set(rocm_cmake_tag "master" CACHE STRING "rocm-cmake tag to download")
+    FetchContent_Declare(
+      rocm-cmake
+      URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/${rocm_cmake_tag}.tar.gz
+    )
+    FetchContent_MakeAvailable(rocm-cmake)
   endif()
-  if(NOT ROCM_FOUND)
-    if(NOT EXISTS "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src")
-      message(STATUS "ROCm CMake not found. Fetching...")
-      set(rocm_cmake_tag "master" CACHE STRING "rocm-cmake tag to download")
-      FetchContent_Declare(
-        rocm-cmake
-        URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/${rocm_cmake_tag}.tar.gz
-      )
-      FetchContent_MakeAvailable(rocm-cmake)
-    endif()
-    find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH HINTS "${rocm-cmake_SOURCE_DIR}")
-  else()
-    find_package(ROCM 0.7.3 CONFIG REQUIRED PATHS /opt/rocm)
-  endif()
-endif() # NOT DEFINED CHIP_BUILD_ROCPRIM
+  # find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH HINTS "${rocm-cmake_SOURCE_DIR}")
+else()
+  # find_package(ROCM 0.7.3 CONFIG REQUIRED PATHS /opt/rocm)
+endif()
 
 # Restore user global state
 set(CMAKE_CXX_FLAGS ${USER_CXX_FLAGS})
@@ -211,11 +208,11 @@ else()
 endif()
 set(ROCM_WARN_TOOLCHAIN_VAR ${USER_ROCM_WARN_TOOLCHAIN_VAR} CACHE BOOL "")
 
-include(ROCMSetupVersion)
-include(ROCMCreatePackage)
-include(ROCMInstallTargets)
-include(ROCMPackageConfigHelpers)
-include(ROCMInstallSymlinks)
-include(ROCMHeaderWrapper)
-include(ROCMCheckTargetIds)
-include(ROCMClients)
+# include(ROCMSetupVersion)          // Comment out ROCm include
+# include(ROCMCreatePackage)        // Comment out ROCm include
+# include(ROCMInstallTargets)       // Comment out ROCm include
+# include(ROCMPackageConfigHelpers) // Comment out ROCm include
+# include(ROCMInstallSymlinks)      // Comment out ROCm include
+# include(ROCMHeaderWrapper)        // Comment out ROCm include
+# include(ROCMCheckTargetIds)       // Comment out ROCm include
+# include(ROCMClients)              // Comment out ROCm include
