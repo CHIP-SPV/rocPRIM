@@ -61,6 +61,14 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# If deviceInternal (chipStar internal cmake target) is not found, 
+# Means we are building out-of-tree, so we need to find hip package
+# We need to this this before including Dependencies.cmake
+# Since Dependencies.cmake will exit early for SPIRV platform
+if(NOT TARGET deviceInternal)
+  find_package(hip REQUIRED CONFIG PATHS ${ROCM_PATH} /opt/rocm)
+endif()
+
 set(BUILD_SHARED_LIBS OFF) # don't build client dependencies as shared
 if(NOT USE_HIP_CPU)
   # Get dependencies (required here to get rocm-cmake)
@@ -80,8 +88,7 @@ if(NOT USE_HIP_CPU)
     set(GPU_TARGETS "${DEFAULT_AMDGPU_TARGETS}" CACHE STRING "GPU architectures to compile for" FORCE)
   endif()
 
-  # TODO: Fix VerifyCompiler for HIP on Windows
-  if (NOT WIN32)
+  if (NOT WIN32 AND NOT ${HIP_PLATFORM} STREQUAL "spirv")
     include(cmake/VerifyCompiler.cmake)
   endif()
   list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH} ${ROCM_PATH}/hip ${ROCM_PATH}/llvm /opt/rocm/llvm /opt/rocm /opt/rocm/hip)
@@ -144,14 +151,14 @@ if(BUILfD_EXAMPLE AND NOT ONLY_INSTALL)
   add_subdirectory(example)
 endif()
 
-if(NOT DEFINED CHIP_BUILD_ROCPRIM)
+if(NOT ${HIP_PLATFORM} STREQUAL "spirv")
   if(NOT ONLY_INSTALL AND (BUILD_TEST OR BUILD_BENCHMARK))
     #rocm_package_setup_component(clients)
   endif()
-endif() # NOT DEFINED CHIP_BUILD_ROCPRIM
+endif() # NOT ${HIP_PLATFORM} STREQUAL "spirv"
 
 # Skip packaging steps when building with chipStar
-if(NOT DEFINED CHIP_BUILD_ROCPRIM)
+if(NOT ${HIP_PLATFORM} STREQUAL "spirv")
   # Package
   set(BUILD_SHARED_LIBS ON) # Build as though shared library for naming
   rocm_package_add_dependencies(DEPENDS "hip-rocclr >= 3.5.0")
@@ -166,7 +173,7 @@ if(NOT DEFINED CHIP_BUILD_ROCPRIM)
     MAINTAINER "rocPRIM Maintainer <rocprim-maintainer@amd.com>"
     HEADER_ONLY
   )
-endif() # NOT DEFINED CHIP_BUILD_ROCPRIM
+endif() # NOT ${HIP_PLATFORM} STREQUAL "spirv"
 
 
 #
