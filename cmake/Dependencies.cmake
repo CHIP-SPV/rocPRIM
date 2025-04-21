@@ -24,12 +24,6 @@
 # rocPRIM dependencies
 # ###########################
 
-# Skip ROCm dependency handling when building with chipStar
-if(HIP_PLATFORM STREQUAL "spirv")
-  message(STATUS "skipping rocPRIM dependency handling for SPIRV platform")
-  return()
-endif()
-
 # NOTE1: the reason we don't scope global state meddling using add_subdirectory
 #        is because CMake < 3.24 lacks CMAKE_FIND_PACKAGE_TARGETS_GLOBAL which
 #        would promote IMPORTED targets of find_package(CONFIG) to be visible
@@ -182,10 +176,13 @@ endif(BUILD_BENCHMARK)
 
 if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
   set(CMAKE_FIND_DEBUG_MODE TRUE)
-  find_package(ROCM 0.7.3 CONFIG QUIET PATHS /opt/rocm)
+  if (NOT HIP_PLATFORM STREQUAL "spirv")
+    find_package(ROCM 0.7.3 CONFIG QUIET PATHS /opt/rocm)
+  endif()
   set(CMAKE_FIND_DEBUG_MODE FALSE)
 endif()
-if(NOT ROCM_FOUND)
+if(NOT ROCM_FOUND AND NOT HIP_PLATFORM STREQUAL "spirv")
+  message(STATUS "ROCm not found. Fetching...")
   if(NOT EXISTS "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src")
     message(STATUS "ROCm CMake not found. Fetching...")
     set(rocm_cmake_tag "master" CACHE STRING "rocm-cmake tag to download")

@@ -81,14 +81,15 @@ if(NOT USE_HIP_CPU)
   endif()
   set_property(CACHE GPU_TARGETS PROPERTY STRINGS "all")
 
-  if(GPU_TARGETS STREQUAL "all")
-    # rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
-    #   TARGETS "gfx803;gfx900:xnack-;gfx906:xnack-;gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx1030;gfx1100;gfx1101;gfx1102"
-    # )
+  if(GPU_TARGETS STREQUAL "all" AND NOT HIP_PLATFORM STREQUAL "spirv")
+    rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
+      TARGETS "gfx803;gfx900:xnack-;gfx906:xnack-;gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx1030;gfx1100;gfx1101;gfx1102"
+    )
     set(GPU_TARGETS "${DEFAULT_AMDGPU_TARGETS}" CACHE STRING "GPU architectures to compile for" FORCE)
   endif()
 
-  if (NOT WIN32 AND NOT ${HIP_PLATFORM} STREQUAL "spirv")
+  # TODO: Fix VerifyCompiler for HIP on Windows
+  if (NOT WIN32)
     include(cmake/VerifyCompiler.cmake)
   endif()
   list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH} ${ROCM_PATH}/hip ${ROCM_PATH}/llvm /opt/rocm/llvm /opt/rocm /opt/rocm/hip)
@@ -100,12 +101,12 @@ endif()
 # FOR HANDLING ENABLE/DISABLE OPTIONAL BACKWARD COMPATIBILITY for FILE/FOLDER REORG
 option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" ON)
 if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY AND NOT WIN32)
-  # rocm_wrap_header_dir(
-  #   "${PROJECT_SOURCE_DIR}/rocprim/include/rocprim"
-  #   WRAPPER_LOCATIONS rocprim/include/rocprim
-  #   OUTPUT_LOCATIONS rocprim/wrapper/include/rocprim
-  #   PATTERNS *.hpp
-  # )
+  rocm_wrap_header_dir(
+    "${PROJECT_SOURCE_DIR}/rocprim/include/rocprim"
+    WRAPPER_LOCATIONS rocprim/include/rocprim
+    OUTPUT_LOCATIONS rocprim/wrapper/include/rocprim
+    PATTERNS *.hpp
+  )
 endif()
 
 if(BUILD_CODE_COVERAGE)
@@ -120,7 +121,7 @@ endif()
 
 # Setup VERSION
 set(VERSION_STRING "2.10.9")
-#rocm_setup_version(VERSION ${VERSION_STRING})
+rocm_setup_version(VERSION ${VERSION_STRING})
 
 # Print configuration summary
 include(cmake/Summary.cmake)
@@ -130,50 +131,41 @@ print_configuration_summary()
 add_subdirectory(rocprim)
 
 if(NOT ONLY_INSTALL AND (BUILD_TEST OR BUILD_BENCHMARK))
-  #rocm_package_setup_component(clients)
+  rocm_package_setup_component(clients)
 endif()
 
 # Tests
 if(BUILD_TEST AND NOT ONLY_INSTALL)
-  #rocm_package_setup_client_component(tests)
+  rocm_package_setup_client_component(tests)
   enable_testing()
   add_subdirectory(test)
 endif()
 
 # Benchmarks
 if(BUILD_BENCHMARK AND NOT ONLY_INSTALL)
-  #rocm_package_setup_client_component(benchmarks)
+  rocm_package_setup_client_component(benchmarks)
   add_subdirectory(benchmark)
 endif()
 
 # Examples
-if(BUILfD_EXAMPLE AND NOT ONLY_INSTALL)
+if(BUILD_EXAMPLE AND NOT ONLY_INSTALL)
   add_subdirectory(example)
 endif()
 
-if(NOT ${HIP_PLATFORM} STREQUAL "spirv")
-  if(NOT ONLY_INSTALL AND (BUILD_TEST OR BUILD_BENCHMARK))
-    #rocm_package_setup_component(clients)
-  endif()
-endif() # NOT ${HIP_PLATFORM} STREQUAL "spirv"
+# Package
+set(BUILD_SHARED_LIBS ON) # Build as though shared library for naming
+rocm_package_add_dependencies(DEPENDS "hip-rocclr >= 3.5.0")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
-# Skip packaging steps when building with chipStar
-if(NOT ${HIP_PLATFORM} STREQUAL "spirv")
-  # Package
-  set(BUILD_SHARED_LIBS ON) # Build as though shared library for naming
-  rocm_package_add_dependencies(DEPENDS "hip-rocclr >= 3.5.0")
-  set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
-  set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "\${CPACK_PACKAGING_INSTALL_PREFIX}" )
 
-  set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "\${CPACK_PACKAGING_INSTALL_PREFIX}" )
-
-  rocm_create_package(
-    NAME rocprim
-    DESCRIPTION "Radeon Open Compute Parallel Primitives Library"
-    MAINTAINER "rocPRIM Maintainer <rocprim-maintainer@amd.com>"
-    HEADER_ONLY
-  )
-endif() # NOT ${HIP_PLATFORM} STREQUAL "spirv"
+rocm_create_package(
+  NAME rocprim
+  DESCRIPTION "Radeon Open Compute Parallel Primitives Library"
+  MAINTAINER "rocPRIM Maintainer <rocprim-maintainer@amd.com>"
+  HEADER_ONLY
+)
 
 
 #
