@@ -470,7 +470,7 @@ inline hipError_t is_sleep_scan_state_used(bool& use_sleep)
 #else
     const int asicRevision = 0;
 #endif
-    use_sleep = prop.gcnArchName != nullptr && strcmp(prop.gcnArchName, "gfx908") == 0 && asicRevision < 2;
+    use_sleep = prop.gcnArchName[0] != '\0' && strcmp(prop.gcnArchName, "gfx908") == 0 && asicRevision < 2;
     return hipSuccess;
 }
 
