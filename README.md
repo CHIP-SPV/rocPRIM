@@ -1,3 +1,28 @@
+# chipStar Notes
+
+75% tests passed, 12 tests failed out of 48
+
+Label Time Summary:
+chip-spv-cpu    =  20.15 sec*proc (6 tests)
+chip-spv-gpu    =  30.15 sec*proc (9 tests)
+hip             = 992.95 sec*proc (31 tests)
+
+Total Test time (real) = 300.18 sec
+
+The following tests FAILED:
+         22 - rocprim.device_adjacent_difference (Failed)
+         23 - rocprim.device_histogram (Failed)
+         25 - rocprim.device_merge_sort (Failed)
+         26 - rocprim.device_partition (Failed)
+         27 - rocprim.device_radix_sort (Failed)
+         28 - rocprim.device_reduce_by_key (Failed)
+         29 - rocprim.device_reduce (Failed)
+         30 - rocprim.device_run_length_encode (Failed)
+         31 - rocprim.device_segmented_radix_sort (Timeout)
+         32 - rocprim.device_segmented_reduce (Failed)
+         33 - rocprim.device_select (Failed)
+         39 - rocprim.transform_iterator (Failed)
+
 # rocPRIM
 
 The rocPRIM is a header-only library providing HIP parallel primitives for developing
