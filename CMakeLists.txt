@@ -73,7 +73,7 @@ if(NOT USE_HIP_CPU)
   endif()
   set_property(CACHE GPU_TARGETS PROPERTY STRINGS "all")
 
-  if(GPU_TARGETS STREQUAL "all" AND NOT HIP_PLATFORM STREQUAL "spirv")
+  if(GPU_TARGETS STREQUAL "all")
     rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
       TARGETS "gfx803;gfx900:xnack-;gfx906:xnack-;gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx1030;gfx1100;gfx1101;gfx1102"
     )

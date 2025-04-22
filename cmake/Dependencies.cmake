@@ -176,7 +176,7 @@ endif(BUILD_BENCHMARK)
 
 if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
   set(CMAKE_FIND_DEBUG_MODE TRUE)
-  find_package(ROCM 0.7.3 CONFIG QUIET HINTS /opt/rocm)
+  find_package(ROCM 0.7.3 CONFIG QUIET PATHS /opt/rocm)
   set(CMAKE_FIND_DEBUG_MODE FALSE)
 endif()
 if(NOT ROCM_FOUND)
@@ -191,7 +191,7 @@ if(NOT ROCM_FOUND)
   endif()
   find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH HINTS "${rocm-cmake_SOURCE_DIR}")
 else()
-  find_package(ROCM 0.7.3 CONFIG REQUIRED HINTS /opt/rocm)
+  find_package(ROCM 0.7.3 CONFIG REQUIRED PATHS /opt/rocm)
 endif()
 
 # Restore user global state
