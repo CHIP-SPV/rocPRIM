@@ -52,6 +52,7 @@ target_include_directories(rocprim
 add_library(rocprim_hip INTERFACE)
 target_link_libraries(rocprim_hip INTERFACE rocprim hip::device)
 
+
 # Installation
 
 # We need to install headers manually as rocm_install_targets

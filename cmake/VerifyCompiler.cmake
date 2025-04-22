@@ -22,9 +22,7 @@
 
 
 list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH} ${ROCM_PATH}/hip ${ROCM_PATH}/llvm /opt/rocm/llvm /opt/rocm /opt/rocm/hip)
-if(NOT TARGET deviceInternal)
-  find_package(hip REQUIRED CONFIG PATHS ${ROCM_PATH} /opt/rocm)
-endif()
+find_package(hip REQUIRED CONFIG PATHS ${HIP_DIR} ${ROCM_PATH} /opt/rocm)
 
 if(HIP_COMPILER STREQUAL "clang")
     if(NOT (HIP_CXX_COMPILER MATCHES ".*hipcc" OR HIP_CXX_COMPILER MATCHES ".*clang\\+\\+"))

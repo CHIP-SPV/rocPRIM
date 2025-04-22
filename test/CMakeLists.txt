@@ -83,7 +83,7 @@ function(add_hip_test TEST_NAME TEST_SOURCES)
   get_filename_component(TEST_TARGET ${TEST_MAIN_SOURCE} NAME_WE)
 
   add_executable(${TEST_TARGET} ${TEST_SOURCES})
-  # rocm_install(TARGETS ${TEST_TARGET} COMPONENT tests)
+  rocm_install(TARGETS ${TEST_TARGET} COMPONENT tests)
 
   target_include_directories(${TEST_TARGET} SYSTEM BEFORE
     PUBLIC
@@ -155,9 +155,9 @@ add_hip_test("hip.async_copy" hip/test_hip_async_copy.cpp)
 # rocPRIM test
 add_subdirectory(rocprim)
 
-# rocm_install(
-#     FILES "${INSTALL_TEST_FILE}"
-#     DESTINATION "${CMAKE_INSTALL_BINDIR}/${PROJECT_NAME}"
-#     COMPONENT tests
-#     RENAME "CTestTestfile.cmake"
-# )
+rocm_install(
+    FILES "${INSTALL_TEST_FILE}"
+    DESTINATION "${CMAKE_INSTALL_BINDIR}/${PROJECT_NAME}"
+    COMPONENT tests
+    RENAME "CTestTestfile.cmake"
+)
