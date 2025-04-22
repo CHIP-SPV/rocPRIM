@@ -513,7 +513,7 @@ void sort_single(KeysInputIterator keys_input,
 
     ROCPRIM_SHARED_MEMORY typename sort_single_helper::storage_type storage;
 
-    sort_single_helper().template sort_single(
+    sort_single_helper().sort_single(
         keys_input, keys_output, values_input, values_output,
         size, bit, current_radix_bits,
         storage
