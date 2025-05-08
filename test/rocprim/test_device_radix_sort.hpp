@@ -686,7 +686,7 @@ inline void sort_keys_over_4g()
     constexpr unsigned int end_bit                 = 8ull * sizeof(key_type);
     constexpr hipStream_t  stream                  = 0;
     constexpr bool         debug_synchronous       = false;
-    constexpr size_t       size                    = (1ull << 32) + 32;
+    constexpr size_t       size                    = (1ull << 31) + 32;
     constexpr size_t       number_of_possible_keys = 1ull << (8ull * sizeof(key_type));
     assert(std::is_unsigned<key_type>::value);
     std::vector<size_t> histogram(number_of_possible_keys, 0);
