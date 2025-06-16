@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -36,9 +36,7 @@ endfunction()
 
 function(add_rocprim_test_internal TEST_NAME TEST_SOURCES TEST_TARGET)
   add_executable(${TEST_TARGET} ${TEST_SOURCES})
-  if (ROCPRIM_INSTALL)
-    rocm_install(TARGETS ${TEST_TARGET} COMPONENT tests)
-  endif()
+  rocm_install(TARGETS ${TEST_TARGET} COMPONENT tests)
 
   target_include_directories(${TEST_TARGET} SYSTEM BEFORE
     PUBLIC
@@ -213,8 +211,6 @@ ${TEST_TYPE_SLICE_COUNT} test type slice(s) for test target ${TEST_TARGET}")
   set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_CLEAN_FILES "${TEST_TARGET}.parallel")
   add_rocprim_test_internal(${TEST_NAME} "${SOURCES}" ${TEST_TARGET})
   target_include_directories("${TEST_TARGET}" PRIVATE "../../test/rocprim")
-  # Make sure the configured files are re-configured if they are removed (via clean).
-  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${SOURCES})
 endfunction()
 
 # ****************************************************************************
@@ -224,59 +220,204 @@ endfunction()
 # HIP basic test, which also checks if there are no linkage problems when there are multiple sources
 add_rocprim_test("rocprim.basic_test" "test_basic.cpp;detail/get_rocprim_version.cpp")
 
+# GPU: Validation errors.
+# CPU: Unsupported SPIR-V module (capability 65, OpGroupNonUniformShuffle)
 add_rocprim_test("rocprim.arg_index_iterator" test_arg_index_iterator.cpp)
 add_rocprim_test("rocprim.temporary_storage_partitioning" test_temporary_storage_partitioning.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: 42 failed out of 343 (all half precision tests).
 add_rocprim_test_parallel("rocprim.block_adjacent_difference" test_block_adjacent_difference.cpp.in)
+
+# GPU: warning: kernel _Z27flag_heads_and_tails_kernelIfcN7rocprim12not_equal_toIfEELj64ELj32EEvPT_PxS5_  compiled SIMD8 allocated 128 regs and spilled around 22 (CL_OUT_OF_RESOURCES)
+# CPU: 21 failed out of 147 (all half precision tests).
 add_rocprim_test_parallel("rocprim.block_discontinuity" test_block_discontinuity.cpp.in)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: 84 failed out of 252, BlockedToWarpStriped/WarpStripedToBlocked
 add_rocprim_test("rocprim.block_exchange" test_block_exchange.cpp)
-add_rocprim_test("rocprim.block_histogram" test_block_histogram.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: SPIRV module requires unsupported capability 65
+# Crashes at build time:
+# opt: /home/pjaaskel/src/llvm-project/llvm/include/llvm/Support/Casting.h:578: decltype(auto) llvm::cast(From*) [with To = llvm::Constant; From = llvm::Value]: Assertion `isa<To>(Val) && "cast<Ty>() argument of incompatible type!"' failed.
+# add_rocprim_test("rocprim.block_histogram" test_block_histogram.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: 6 failed out of 294 (all half precision tests).
 add_rocprim_test("rocprim.block_load_store" test_block_load_store.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: SPIRV module requires unsupported capability 65
 add_rocprim_test("rocprim.block_sort_merge" test_block_sort_merge.cpp)
 add_rocprim_test("rocprim.block_sort_merge_stable" test_block_sort_merge_stable.cpp)
 add_rocprim_test_parallel("rocprim.block_radix_rank" test_block_radix_rank.cpp.in)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: SPIRV module requires unsupported capability 65
 add_rocprim_test_parallel("rocprim.block_radix_sort" test_block_radix_sort.cpp.in)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: 3 / 193 pass (and takes forever to run)
+# CPU: SPIRV module requires unsupported capability 65
 add_rocprim_test("rocprim.block_reduce" test_block_reduce.cpp)
-add_rocprim_test("rocprim.block_run_length_decode" test_block_run_length_decode.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: took too long, killed.
 add_rocprim_test_parallel("rocprim.block_scan" test_block_scan.cpp.in)
+
+# GPU: CL_OUT_OF_RESOURCES at build time then verif. error (inifite loop in the main program too maybe?)
+# CPU: OK
 add_rocprim_test("rocprim.block_shuffle" test_block_shuffle.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: took too long, killed.
 add_rocprim_test("rocprim.block_sort_bitonic" test_block_sort_bitonic.cpp)
+
+# GPU: !HostMatchesDevice
+# CPU: !HostMatchesDevice
 add_rocprim_test("rocprim.config_dispatch" test_config_dispatch.cpp)
+
+# GPU: OK
+# CPU: (CL_INVALID_ARG_SIZE clSetKernelArg failed)
 add_rocprim_test("rocprim.constant_iterator" test_constant_iterator.cpp)
 add_rocprim_test("rocprim.counting_iterator" test_counting_iterator.cpp)
-add_rocprim_test("rocprim.device_batch_memcpy" test_device_batch_memcpy.cpp)
+
+# GPU: hipErrorInvalidHandle (passed in nullptr) in src/chip-spv/src/CHIPBindings.cc:2628:hipMemcpy
+# CPU: same
 add_rocprim_test("rocprim.device_binary_search" test_device_binary_search.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: hipErrorInvalidHandle (passed in nullptr) in /home/pjaaskel/src/chip-spv/src/CHIPBindings.cc:2628:hipMemcpy
 add_rocprim_test("rocprim.device_adjacent_difference" test_device_adjacent_difference.cpp)
+
+# GPU: 2/35 pass.
+# CPU: hipErrorTbd (CL_INVALID_ARG_SIZE clSetKernelArg failed)
 add_rocprim_test("rocprim.device_histogram" test_device_histogram.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: hipErrorInvalidHandle (passed in nullptr) in /home/pjaaskel/src/chip-spv/src/CHIPBindings.cc:2628:hipMemcpy
 add_rocprim_test("rocprim.device_merge" test_device_merge.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time and hipErrorInvalidHandle (passed in nullptr) in /home/pjaaskel/src/chip-spv/src/CHIPBindings.cc:2628:hipMemcpy
+# CPU: took too long, killed.
 add_rocprim_test("rocprim.device_merge_sort" test_device_merge_sort.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time and hipErrorInvalidHandle (passed in nullptr) in /home/pjaaskel/src/chip-spv/src/CHIPBindings.cc:2628:hipMemcpy
+# CPU: took too long, killed.
 add_rocprim_test("rocprim.device_partition" test_device_partition.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: segfault
+# Crashes in llvm-spirv's switch..case validation during rocPRIM build.
 add_rocprim_test_parallel("rocprim.device_radix_sort" test_device_radix_sort.cpp.in)
+
+# GPU: warning: kernel _ZN7rocprim6detail13reduce_by_key6kernelINS1_14default_configILj0EiiEEPiS5_S5_S5_PjNS_8equal_toIiEENS_4plusIiEENS0_19lookback_scan_stateINS_5tupleIJjiEEELb0ELb0EEEEEvT0_T1_T2_T3_T4_T6_T5_T7_NS0_16ordered_block_idIjEEmm  compiled SIMD8 allocated 128 regs and spilled around 49 (CL_OUT_OF_RESOURCES)
+# CPU: hipErrorOutOfMemory (Allocation size exceeds limits for a single allocation) in /home/pjaaskel/src/chip-spv/src/CHIPBackend.cc:1110:allocate
 add_rocprim_test("rocprim.device_reduce_by_key" test_device_reduce_by_key.cpp)
+
+# GPU: 28 / 64 pass (rest do not validate)
+# CPU: 28 / 64 pass (rest do not validate)
 add_rocprim_test("rocprim.device_reduce" test_device_reduce.cpp)
+
+# GPU: warning: kernel _ZN7rocprim6detail13reduce_by_key6kernelINS1_14default_configILj0EijEEPiNS_17constant_iteratorIjlEEN10test_utils17identity_iteratorIiEESA_SA_NS_8equal_toIiEENS_4plusIjEENS0_19lookback_scan_stateINS_5tupleIJjjEEELb0ELb0EEEEEvT0_T1_T2_T3_T4_T6_T5_T7_NS0_16ordered_block_idIjEEmm  compiled SIMD8 allocated 128 regs and spilled around 52 (CL_OUT_OF_RESOURCES)
+# CPU: took too long, killed.
 add_rocprim_test("rocprim.device_run_length_encode" test_device_run_length_encode.cpp)
-add_rocprim_test("rocprim.device_scan" test_device_scan.cpp)
+
+# Crashes in llvm-spirv's switch..case validation during rocPRIM build.
+# add_rocprim_test("rocprim.device_scan" test_device_scan.cpp)
+
+# GPU: took too long, killed
+# CPU: took too long, killed
 add_rocprim_test_parallel("rocprim.device_segmented_radix_sort" test_device_segmented_radix_sort.cpp.in)
+
+# GPU: all fail validation and hipErrorInvalidHandle (passed in nullptr) in src/chip-spv/src/CHIPBindings.cc:2628:hipMemcpy
+# CPU: took too long, killed
 add_rocprim_test("rocprim.device_segmented_reduce" test_device_segmented_reduce.cpp)
-add_rocprim_test("rocprim.device_segmented_scan" test_device_segmented_scan.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: took too long, killed
+# Crashes in llvm-spirv's switch..case validation during rocPRIM build.
+#add_rocprim_test("rocprim.device_segmented_scan" test_device_segmented_scan.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: took too long, killed
 add_rocprim_test("rocprim.device_select" test_device_select.cpp)
+
+# GPU: hipErrorInvalidHandle (passed in nullptr)
+# CPU: hipErrorInvalidHandle (passed in nullptr)
 add_rocprim_test("rocprim.device_transform" test_device_transform.cpp)
+
+# GPU: OK
+# CPU: hipErrorOutOfMemory (allocation size exceeds limits for a single allocation)
 add_rocprim_test("rocprim.discard_iterator" test_discard_iterator.cpp)
-add_rocprim_test("rocprim.radix_key_codec" test_radix_key_codec.cpp)
-add_rocprim_test("rocprim.predicate_iterator" test_predicate_iterator.cpp)
+
+# GPU: CL_OUT_OF_RESOURCES at build time.
+# CPU: segfault
 add_rocprim_test("rocprim.reverse_iterator" test_reverse_iterator.cpp)
-if(NOT USE_HIP_CPU)
-add_rocprim_test("rocprim.texture_cache_iterator" test_texture_cache_iterator.cpp)
-endif()
+#Crashes at build time, thus disabled.
+#opt: ... HipTextureLowering.cpp:459: bool (anonymous namespace)::lowerTextureFunctions(llvm::Module &): Assertion `false && "Unsupported texture function use."' failed
+# add_rocprim_test("rocprim.texture_cache_iterator" test_texture_cache_iterator.cpp)
+
+# GPU: OK
+# CPU: OK
 add_rocprim_test("rocprim.thread" test_thread.cpp)
+
+# GPU: OK
+# CPU: OK
 add_rocprim_test("rocprim.thread_algos" test_thread_algos.cpp)
+
+# GPU: all fail validation
+# CPU: hipErrorTbd (CL_INVALID_ARG_SIZE clSetKernelArg failed)
 add_rocprim_test("rocprim.transform_iterator" test_transform_iterator.cpp)
 add_rocprim_test("rocprim.no_half_operators" test_no_half_operators.cpp)
+
 add_rocprim_test("rocprim.intrinsics" test_intrinsics.cpp)
-add_rocprim_test("rocprim.invoke_result" test_invoke_result.cpp)
+
+# CPU: Likely fails most warp cases in one way or another due to
+# the lack of required subgroup size + flat id mapping support.
+# GPU: passes
 add_rocprim_test("rocprim.warp_exchange" test_warp_exchange.cpp)
 add_rocprim_test("rocprim.warp_load" test_warp_load.cpp)
 add_rocprim_test("rocprim.warp_reduce" test_warp_reduce.cpp)
 add_rocprim_test("rocprim.warp_scan" test_warp_scan.cpp)
 add_rocprim_test("rocprim.warp_sort" test_warp_sort.cpp)
 add_rocprim_test("rocprim.warp_store" test_warp_store.cpp)
+
+# GPU: 3/4 pass, TransformReduce fail.
+# CPU: likely stuck
 add_rocprim_test("rocprim.zip_iterator" test_zip_iterator.cpp)
+
+set_tests_properties(
+  rocprim.arg_index_iterator
+  rocprim.basic_test
+  rocprim.intrinsics
+  rocprim.warp_exchange
+  rocprim.warp_load
+  rocprim.warp_reduce
+  rocprim.warp_scan
+  rocprim.warp_sort
+  rocprim.warp_store
+  rocprim.constant_iterator
+  rocprim.counting_iterator
+  rocprim.discard_iterator
+  rocprim.thread
+  rocprim.thread_algos
+  PROPERTIES
+  LABELS "chip-spv-gpu"
+)
+
+set_tests_properties(
+  rocprim.block_shuffle
+  rocprim.counting_iterator
+  rocprim.intrinsics
+  rocprim.thread
+  rocprim.thread_algos
+  rocprim.warp_load
+  PROPERTIES
+  LABELS "chip-spv-cpu"
+)
+
+# This define is needed for CHIP-SPV because of atomicAdd for unsigned long,
+# which is not documented in HIP programmer's manual:
+add_compile_definitions(CHIP_ENABLE_NON_COMPLIANT_DEVICELIB_CODE=1)

@@ -49,7 +49,12 @@ lane_mask_type ballot(int predicate)
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int masked_bit_count(lane_mask_type x, unsigned int add = 0)
 {
-    int c;
+  int c;
+#if defined(__HIP_PLATFORM_SPIRV__)
+  // Semantics of V_MBCNT_LO_U32_B32 from
+  // https://www.amd.com/system/files/TechDocs/gcn3-instruction-set-architecture.pdf
+  c = bit_count((unsigned)x & ((1 << __lane_id()) - 1)) + add;
+#else
     #ifndef __HIP_CPU_RT__
         #if __AMDGCN_WAVEFRONT_SIZE == 32
             #ifdef __HIP__
@@ -72,7 +77,8 @@ unsigned int masked_bit_count(lane_mask_type x, unsigned int add = 0)
         std::bitset<warpSize> bits{x >> (warpSize - tidx)};
         c = static_cast<unsigned int>(bits.count()) + add;
     #endif
-    return c;
+#endif
+  return c;
 }
 
 namespace detail

@@ -94,7 +94,7 @@ protected:
     using T = int;
     using vector_type = std::vector<T, PinnedAllocator<T>>;
     static constexpr int seed = 543897;
-    static constexpr unsigned int block_size = 1024;
+    static constexpr unsigned int block_size = 512;
 
     std::vector<size_t> sizes;
     std::vector<vector_type> inputs;
@@ -211,7 +211,7 @@ TEST(HipAsyncCopyTestsExtra, StreamInStruct)
     using T = int;
     using vector_type = std::vector<T, PinnedAllocator<T>>;
     static constexpr int seed = 543897;
-    static constexpr unsigned int block_size = 1024;
+    static constexpr unsigned int block_size = 512;
 
     const size_t size = get_sizes().back();
     std::default_random_engine prng(seed);

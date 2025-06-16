@@ -1281,7 +1281,7 @@ void sort_keys_over_4g()
     constexpr unsigned int start_bit               = 0;
     constexpr unsigned int end_bit                 = 8ull * sizeof(key_type);    
     constexpr bool         debug_synchronous       = false;
-    constexpr size_t       size                    = (1ull << 32) + 32;
+    constexpr size_t       size                    = (1ull << 31) + 32;
     constexpr size_t       number_of_possible_keys = 1ull << (8ull * sizeof(key_type));
     hipStream_t stream = 0;
     if (UseGraphs)

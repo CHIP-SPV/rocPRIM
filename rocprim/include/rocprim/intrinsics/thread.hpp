@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -44,6 +44,24 @@ constexpr unsigned int warp_size()
     return warpSize;
 }
 
+/// \brief Returns a number of threads in a hardware warp for the actual device.
+/// At host side this constant is available at runtime time only.
+///
+/// It is constant for a device.
+ROCPRIM_HOST inline
+unsigned int host_warp_size()
+{
+    int default_hip_device;
+    hipError_t success = hipGetDevice(&default_hip_device);
+    hipDeviceProp_t device_prop;
+    success = hipGetDeviceProperties(&device_prop,default_hip_device);
+
+    if(success != hipSuccess)
+        return -1;
+    else
+        return device_prop.warpSize;
+};
+
 /// \brief Returns a number of threads in a hardware warp for the actual target.
 /// At device side this constant is available at compile time.
 ///
@@ -70,20 +88,7 @@ unsigned int flat_tile_size()
 
 // IDs
 
-/// \brief Returns thread identifier in a warp.
-ROCPRIM_DEVICE ROCPRIM_INLINE
-unsigned int lane_id()
-{
-#ifndef __HIP_CPU_RT__
-    return ::__lane_id();
-#else
-    using namespace hip::detail;
-    return id(Fiber::this_fiber()) % warpSize;
-#endif
-}
-
 /// \brief Returns flat (linear, 1D) thread identifier in a multidimensional block (tile).
-/// \ingroup intrinsicsmodule_flat_id
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int flat_block_thread_id()
 {
@@ -92,7 +97,18 @@ unsigned int flat_block_thread_id()
         + threadIdx.x;
 }
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
+/// \brief Returns thread identifier in a warp.
+ROCPRIM_DEVICE ROCPRIM_INLINE
+unsigned int lane_id()
+{
+#if !defined(__HIP_CPU_RT__)
+    return ::__lane_id();
+#else
+    using namespace hip::detail;
+    return id(Fiber::this_fiber()) % warpSize;
+#endif
+}
+
 /// \brief Returns flat (linear, 1D) thread identifier in a multidimensional block (tile). Use template parameters to optimize 1D or 2D kernels.
 template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
 ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -118,7 +134,6 @@ auto flat_block_thread_id()
     return threadIdx.x + (threadIdx.y * blockDim.x) +
            (threadIdx.z * blockDim.y * blockDim.x);
 }
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Returns flat (linear, 1D) thread identifier in a multidimensional tile (block).
 ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -128,34 +143,27 @@ unsigned int flat_tile_thread_id()
 }
 
 /// \brief Returns warp id in a block (tile).
-/// \ingroup intrinsicsmodule_warp_id
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int warp_id()
 {
     return flat_block_thread_id()/device_warp_size();
 }
 
-/// \brief Returns warp id in a block (tile), given the flat (linear, 1D) thread identifier in a multidimensional tile (block).
-/// \param flat_id - the flat id that should be used to compute the warp id.
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int warp_id(unsigned int flat_id)
 {
     return flat_id/device_warp_size();
 }
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
 /// \brief Returns warp id in a block (tile). Use template parameters to optimize 1D or 2D kernels.
-/// \ingroup intrinsicsmodule_warp_id
 template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int warp_id()
 {
     return flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>()/device_warp_size();
 }
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Returns flat (linear, 1D) block identifier in a multidimensional grid.
-/// \ingroup intrinsicsmodule_flat_id
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int flat_block_id()
 {
@@ -164,7 +172,6 @@ unsigned int flat_block_id()
         + blockIdx.x;
 }
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
 template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
 ROCPRIM_DEVICE ROCPRIM_INLINE
 auto flat_block_id()
@@ -189,7 +196,6 @@ auto flat_block_id()
     return blockIdx.x + (blockIdx.y * gridDim.x) +
            (blockIdx.z * gridDim.y * gridDim.x);
 }
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 // Sync
 
@@ -216,10 +222,13 @@ void syncthreads()
 ROCPRIM_DEVICE ROCPRIM_INLINE
 void wave_barrier()
 {
+#if defined(__HIP_PLATFORM_SPIRV__)
+    __syncwarp();
+#else
     __builtin_amdgcn_fence(__ATOMIC_RELEASE, "wavefront");
     __builtin_amdgcn_wave_barrier();
     __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "wavefront");
-
+#endif
 }
 
 namespace detail
@@ -341,13 +350,6 @@ namespace detail
     void memory_fence_device()
     {
         ::__threadfence();
-        // Hotfix: On GFX10 (Navi 10/RDNA1, Navi 20/RDNA2) ISA and GFX11 ISA (Navi 30 GPUs),
-        // the compiler emits the L0 and L1 invalidate in the wrong order.
-        //
-        // See: https://github.com/llvm/llvm-project/pull/81450
-#if defined(__GFX10__) || defined(__GFX11__)
-        asm volatile("buffer_gl0_inv");
-#endif
     }
 }
 

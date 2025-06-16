@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +24,7 @@
 #include <type_traits>
 
 #include "../config.hpp"
-    #include "../detail/various.hpp"
-    #include "thread.hpp"
+#include "thread.hpp"
 
 /// \addtogroup warpmodule
 /// @{
@@ -35,6 +34,24 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
+#ifdef __HIP_CPU_RT__
+// TODO: consider adding macro checks relaying to std::bit_cast when compiled
+//       using C++20.
+template <class To, class From>
+typename std::enable_if_t<
+    sizeof(To) == sizeof(From) &&
+    std::is_trivially_copyable_v<From> &&
+    std::is_trivially_copyable_v<To>,
+    To>
+// constexpr support needs compiler magic
+bit_cast(const From& src) noexcept
+{
+    To dst;
+    std::memcpy(&dst, &src, sizeof(To));
+    return dst;
+}
+#endif
+
 template<class T, class ShuffleOp>
 ROCPRIM_DEVICE ROCPRIM_INLINE
 typename std::enable_if<std::is_trivially_copyable<T>::value && (sizeof(T) % sizeof(int) == 0), T>::type
@@ -43,8 +60,11 @@ warp_shuffle_op(const T& input, ShuffleOp&& op)
     constexpr int words_no = (sizeof(T) + sizeof(int) - 1) / sizeof(int);
 
     struct V { int words[words_no]; };
-
-    auto a = ::rocprim::detail::bit_cast<V>(input);
+#ifdef __HIP_CPU_RT__
+    V a = bit_cast<V>(input);
+#else
+    V a = __builtin_bit_cast(V, input);
+#endif
 
     ROCPRIM_UNROLL
     for(int i = 0; i < words_no; i++)
@@ -52,7 +72,11 @@ warp_shuffle_op(const T& input, ShuffleOp&& op)
         a.words[i] = op(a.words[i]);
     }
 
-    return ::rocprim::detail::bit_cast<T>(a);
+#ifdef __HIP_CPU_RT__
+    return bit_cast<T>(a);
+#else
+    return __builtin_bit_cast(T, a);
+#endif
 }
 
 template<class T, class ShuffleOp>
@@ -99,7 +123,7 @@ T warp_move_dpp(const T& input)
             //       __builtin_amdgcn_update_dpp, hence fail to parse the template altogether. (Except MSVC
             //       because even using /permissive- they somehow still do delayed parsing of the body of
             //       function templates, even though they pinky-swear they don't.)
-#if !defined(__HIP_CPU_RT__)
+#if !defined(__HIP_CPU_RT__) && !defined(__HIP_PLATFORM_SPIRV__)
             return ::__builtin_amdgcn_mov_dpp(v, dpp_ctrl, row_mask, bank_mask, bound_ctrl);
 #else
             return v;
@@ -118,6 +142,10 @@ template<class T, int mask>
 ROCPRIM_DEVICE ROCPRIM_INLINE
 T warp_swizzle(const T& input)
 {
+#ifdef __HIP_PLATFORM_SPIRV__
+  printf("ERR warp_swizzle unimplemented\n");
+  return T();
+#else 
     return detail::warp_shuffle_op(
         input,
         [=](int v) -> int
@@ -125,6 +153,7 @@ T warp_swizzle(const T& input)
             return ::__builtin_amdgcn_ds_swizzle(v, mask);
         }
     );
+#endif    
 }
 
 } // end namespace detail
@@ -230,40 +259,7 @@ T warp_shuffle_xor(const T& input, const int lane_mask, const int width = device
     );
 }
 
-namespace detail
-{
-
-/// \brief Shuffle XOR for any data type using warp_swizzle.
-///
-/// <tt>i</tt>-th thread in warp obtains \p input from <tt>i^lane_mask</tt>-th
-/// thread in warp. Makes use of of the swizzle instruction for powers of 2 till 16.
-/// Defaults to warp_shuffle_xor.
-///
-/// Note: The optional \p width parameter must be a power of 2; results are
-/// undefined if it is not a power of 2, or it is greater than device_warp_size().
-///
-/// \param v - input to pass to other threads
-/// \param mask - mask used for calculating source lane id
-/// \param width - logical warp width
-template<class V>
-ROCPRIM_DEVICE ROCPRIM_INLINE V warp_swizzle_shuffle(V&        v,
-                                                     const int mask,
-                                                     const int width = device_warp_size())
-{
-    switch(mask)
-    {
-        case 1: return warp_swizzle<V, 0x041F>(v);
-        case 2: return warp_swizzle<V, 0x081F>(v);
-        case 4: return warp_swizzle<V, 0x101F>(v);
-        case 8: return warp_swizzle<V, 0x201F>(v);
-        case 16: return warp_swizzle<V, 0x401F>(v);
-        default: return warp_shuffle_xor(v, mask, width);
-    }
-}
-
-} // namespace detail
-
-/// \brief Permute items across the threads in a warp.
+/// \brief Permute items across the threads in a warp.,
 ///
 /// The value from this thread in the warp is permuted to the <tt>dst_lane</tt>-th
 /// thread in the warp. If multiple warps write to the same destination, the result
@@ -283,25 +279,37 @@ ROCPRIM_DEVICE ROCPRIM_INLINE T warp_permute(const T&  input,
                                              const int dst_lane,
                                              const int width = device_warp_size())
 {
-    // The amdgcn intrinsic does not support virtual warp sizes, so in order to support those, manually
-    // wrap around the dst_lane within groups of log2(width) bits.
     const int self  = lane_id();
-    // Construct a mask of bits which make up a virtual warp. If the warp size is `width` (a power of 2),
-    // then the lower `width - 1` bits indicate the position within a virtual warp, and the remainder
-    // indicate the position of the virtual warp within the real warp.
-    const unsigned int mask = width - 1;
-    // Wrap the `dst_lane` around the virtual warp size by only considering the part within the
-    // virtual warp size, defined by the bits in the mask. The hardware warp index is given by adding the
-    // virtual warp's destination lane to the virtual warp's base offset, which is given by rounding down the
-    // current lane's position by the virtual warp size.
-    // Note that the extra right shift by 2 is required for the amdgcn intrinsic.
-    const int index = ((dst_lane & mask) + (self & ~mask)) << 2;
-    return detail::warp_shuffle_op(
-        input,
-        [=](int v) -> int
-        // __builtin_amdgcn_ds_permute maps to the `ds_permute_b32` instruction.
-        // See AMD ISA reference at https://gpuopen.com/amd-isa-documentation/.
-        { return __builtin_amdgcn_ds_permute(index, v); });
+#ifdef __HIP_PLATFORM_SPIRV__
+    int src_i = -1;
+    for (int i = 0; i < width; ++i)
+    {
+      // Find the source lane for this source. TBD: There must be
+      // a faster way. Most likely even using shared mem for storing
+      // the indices is faster in most cases than up to 64 of shuffles...
+      int found_dst_i = __shfl(dst_lane, i, width) % width;
+      if (found_dst_i == self)
+        src_i = i;
+      // We cannot break out early from the loop as it causes non-uniform
+      // shuffles.
+    }
+    // Do a basic shuffle from the found source even though src_i might
+    // be -1 to avoid a divering shuffle.
+    return detail::warp_shuffle_op(input,
+                                   [=](int v) -> int
+                                   {
+                                     int val = __shfl(v, src_i, width);
+                                     if (src_i == -1)
+                                       return 0;
+                                     else
+                                       return val;
+                                   });
+#else
+    const int dst_i = (dst_lane + (self & ~(width - 1))) << 2;
+    return detail::warp_shuffle_op(input,
+                                   [=](int v) -> int
+                                   { return __builtin_amdgcn_ds_permute(dst_i, v); });
+#endif
 }
 
 END_ROCPRIM_NAMESPACE

@@ -186,11 +186,12 @@ if(NOT ROCM_FOUND)
   else()
     set(SOURCE_SUBDIR_ARG)
   endif()
-  set(rocm_cmake_tag "master" CACHE STRING "rocm-cmake tag to download")
+  # Use a rocm-cmake tag prior to build-tools split to avoid extra dependency
+  set(rocm_cmake_tag "rocm-6.0.0" CACHE STRING "rocm-cmake tag to download")
   FetchContent_Declare(
     rocm-cmake
     GIT_REPOSITORY https://github.com/ROCm/rocm-cmake.git
-    GIT_TAG        rocm-6.1.2
+    GIT_TAG        ${rocm_cmake_tag}
     ${SOURCE_SUBDIR_ARG}
   )
   FetchContent_MakeAvailable(rocm-cmake)
