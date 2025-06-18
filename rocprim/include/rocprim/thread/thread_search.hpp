@@ -32,6 +32,7 @@
 
  #include <iterator>
  #include "../config.hpp"
+ #include "../functional.hpp"
 
  BEGIN_ROCPRIM_NAMESPACE
 
@@ -54,7 +55,7 @@ ROCPRIM_HOST_DEVICE inline void merge_path_search(
     /// The value type of the input iterator
     typedef typename std::iterator_traits<AIteratorT>::value_type T;
 
-    OffsetT split_min = ::rocprim::max(diagonal - b_len, 0);
+    OffsetT split_min = ::rocprim::max(diagonal - b_len, OffsetT(0));
     OffsetT split_max = ::rocprim::min(diagonal, a_len);
 
     while (split_min < split_max)
