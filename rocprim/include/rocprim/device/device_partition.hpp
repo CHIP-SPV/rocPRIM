@@ -22,6 +22,7 @@
 #define ROCPRIM_DEVICE_DEVICE_PARTITION_HPP_
 
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <iterator>
 #include <type_traits>
