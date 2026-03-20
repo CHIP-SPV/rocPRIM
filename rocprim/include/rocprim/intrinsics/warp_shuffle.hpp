@@ -87,7 +87,13 @@ warp_shuffle_op(const T& input, ShuffleOp&& op)
     constexpr int words_no = (sizeof(T) + sizeof(int) - 1) / sizeof(int);
 
     T output;
+    // SPIR-V workaround: LLVM miscompiles the memcpy+shuffle pattern for
+    // sub-int types (_Float16) when the loop is unrolled at -O1+.
+#if defined(__HIP_PLATFORM_SPIRV__)
+    ROCPRIM_NO_UNROLL
+#else
     ROCPRIM_UNROLL
+#endif
     for(int i = 0; i < words_no; i++)
     {
         const size_t s = std::min(sizeof(int), sizeof(T) - i * sizeof(int));
