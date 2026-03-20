@@ -204,8 +204,15 @@ private:
             T thread_reduction = storage_.threads[flat_tid];
             for(unsigned int i = warp_size_ + flat_tid; i < BlockSize; i += warp_size_)
             {
+                // Copy shared memory value to a local (private) variable before
+                // passing to reduce_op. This prevents LLVM from creating phi nodes
+                // that select between pointers in different address spaces (private
+                // alloca vs shared memory) when reduce_op is inlined. Such mixed
+                // address-space phis are miscompiled on SPIR-V targets after
+                // SimplifyCFG merges blocks.
+                T shared_val = storage_.threads[i];
                 thread_reduction = reduce_op(
-                    thread_reduction, storage_.threads[i]
+                    thread_reduction, shared_val
                 );
             }
             warp_reduce<block_size_smaller_than_warp_size_, warp_reduce_prefix_type>(
@@ -237,8 +244,9 @@ private:
             #pragma unroll
             for( unsigned int i = 0; i < segment_length_; i++ )
             {
+                T shared_val = storage_pointer[i];
                 thread_reduction = reduce_op(
-                    thread_reduction, storage_pointer[i]
+                    thread_reduction, shared_val
                 );
             }
             warp_reduce<block_size_smaller_than_warp_size_, warp_reduce_prefix_type>(
@@ -294,7 +302,8 @@ private:
             {
                 if(i < valid_items)
                 {
-                    thread_reduction = reduce_op(thread_reduction, storage_.threads[i]);
+                    T shared_val = storage_.threads[i];
+                    thread_reduction = reduce_op(thread_reduction, shared_val);
                 }
             }
             warp_reduce_prefix_type().reduce(thread_reduction, output, valid_items, reduce_op);
