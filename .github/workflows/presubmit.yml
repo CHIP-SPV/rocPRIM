@@ -52,46 +52,33 @@ jobs:
           path: build/Testing/**/LastTest*.log
           if-no-files-found: ignore
 
-  salami-arm64:
-    runs-on: [self-hosted, Linux, ARM64]
-    env:
-      CHIP_MODULE_CACHE_DIR: ""
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 1
-      - name: Build and test (chip-spv-cpu)
-        shell: bash
-        run: |
-          set -e
-          if [ -f "$HOME/.local/init/bash" ]; then
-            export MODULESHOME=$HOME/.local
-            source "$MODULESHOME/init/bash"
-          elif [ -f /etc/profile.d/lmod.sh ]; then
-            source /etc/profile.d/lmod.sh
-          else
-            source /etc/profile.d/modules.sh
-          fi
-          module use ~/modulefiles
-          module load llvm/22.0-native HIP/chipStar/main
-          module list
-          rm -rf ~/.cache/chipStar build
-          cmake -S . -B build \
-            -DCMAKE_CXX_COMPILER="$(which hipcc)" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_TEST=ON -DBUILD_BENCHMARK=OFF \
-            -DAMDGPU_TEST_TARGETS=""
-          cmake --build build -j 4
-          exclude=$(grep -Ev '^\s*(#|$)' .ci/exclude.txt | paste -sd '|' -)
-          cd build
-          ctest --output-on-failure --timeout 300 -L chip-spv-cpu ${exclude:+-E "$exclude"}
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ctest-logs-salami
-          path: build/Testing/**/LastTest*.log
-          if-no-files-found: ignore
+  # TODO: enable once salami has llvm/22.0-native + HIP/chipStar/main installed
+  # (LLVM 22 build is in progress 2026-04-15 — expect ~10h on ARM).
+  # salami-arm64:
+  #   runs-on: [self-hosted, Linux, ARM64]
+  #   env:
+  #     CHIP_MODULE_CACHE_DIR: ""
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ github.event.pull_request.head.sha }}
+  #         fetch-depth: 1
+  #     - name: Build and test (chip-spv-cpu)
+  #       shell: bash
+  #       run: |
+  #         set -e
+  #         source /etc/profile.d/modules.sh
+  #         module use ~/modulefiles
+  #         module load llvm/22.0-native HIP/chipStar/main
+  #         rm -rf ~/.cache/chipStar build
+  #         cmake -S . -B build \
+  #           -DCMAKE_CXX_COMPILER="$(which hipcc)" \
+  #           -DCMAKE_BUILD_TYPE=Release \
+  #           -DBUILD_TEST=ON -DBUILD_BENCHMARK=OFF -DAMDGPU_TEST_TARGETS=""
+  #         cmake --build build -j 2
+  #         exclude=$(grep -Ev '^\s*(#|$)' .ci/exclude.txt | paste -sd '|' -)
+  #         cd build
+  #         ctest --output-on-failure --timeout 300 -L chip-spv-cpu ${exclude:+-E "$exclude"}
 
   pastrami-macos:
     runs-on: [self-hosted, ARM64, MacOS]
@@ -106,14 +93,9 @@ jobs:
         shell: bash
         run: |
           set -e
-          if [ -f "$HOME/.local/init/bash" ]; then
-            export MODULESHOME=$HOME/.local
-            source "$MODULESHOME/init/bash"
-          elif [ -f /etc/profile.d/lmod.sh ]; then
-            source /etc/profile.d/lmod.sh
-          fi
+          source /opt/homebrew/Cellar/modules/5.6.0/init/bash
           module use ~/modulefiles
-          module load llvm/22.0-native HIP/chipStar/main
+          module load llvm/22.0-native pocl HIP/chipStar/main
           module list
           rm -rf ~/.cache/chipStar build
           cmake -S . -B build \
