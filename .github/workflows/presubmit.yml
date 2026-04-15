@@ -40,7 +40,8 @@ jobs:
             -DCMAKE_CXX_COMPILER="$(which hipcc)" \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TEST=ON -DBUILD_BENCHMARK=OFF \
-            -DAMDGPU_TEST_TARGETS=""
+            -DAMDGPU_TEST_TARGETS="" \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build build -j 8
           exclude=$(grep -Ev '^\s*(#|$)' .ci/exclude.txt | paste -sd '|' -)
           cd build
@@ -102,7 +103,8 @@ jobs:
             -DCMAKE_CXX_COMPILER="$(which hipcc)" \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TEST=ON -DBUILD_BENCHMARK=OFF \
-            -DAMDGPU_TEST_TARGETS=""
+            -DAMDGPU_TEST_TARGETS="" \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build build -j 4
           exclude=$(grep -Ev '^\s*(#|$)' .ci/exclude.txt | paste -sd '|' -)
           cd build
