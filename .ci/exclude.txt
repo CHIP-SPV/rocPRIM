@@ -1,0 +1,15 @@
+# CTest regex patterns (one per line) for tests excluded from CI.
+# Blank lines and '#' comments are ignored. Every entry should link to an
+# upstream issue — fix the test, don't register failures indefinitely.
+#
+# Source: /space/pvelesko/2026.04.14-lib-fixes/bug-summary.md (2026-04-14 sweep).
+
+# Pre-existing chipStar kernel-name lookup failure (not a rocPRIM bug).
+# Tracked in bug-summary.md §1 "test_device_reduce_by_key — unchanged —
+# pre-existing unrelated kernel-name lookup failure".
+rocprim\.device_reduce_by_key
+
+# IGC bug #403 (SIMD32 finalizer silently drops kernels after register-pressure
+# retry). Upstream: https://github.com/intel/intel-graphics-compiler/issues/403
+# Mitigation: CHIP_L0_FORCE_SIMD16 or wait for IGC fix.
+rocprim\.device_run_length_encode

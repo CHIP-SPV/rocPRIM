@@ -1,0 +1,88 @@
+name: Presubmit (chipStar / Intel)
+
+on:
+  pull_request:
+    paths-ignore: "docs/**"
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests-llvm-22-native-release:
+    runs-on: [self-hosted, Linux, X64]
+    env:
+      CHIP_MODULE_CACHE_DIR: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Build and test
+        run: ./scripts/ci_unit_tests.sh release llvm-22 --variant=native
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ctest-logs-llvm-22-native-release
+          path: build/Testing/**/LastTest*.log
+          if-no-files-found: ignore
+
+  unit-tests-llvm-22-native-debug:
+    runs-on: [self-hosted, Linux, X64]
+    env:
+      CHIP_MODULE_CACHE_DIR: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Build and test
+        run: ./scripts/ci_unit_tests.sh debug llvm-22 --variant=native
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ctest-logs-llvm-22-native-debug
+          path: build/Testing/**/LastTest*.log
+          if-no-files-found: ignore
+
+  unit-tests-llvm-22-translator-release:
+    runs-on: [self-hosted, Linux, X64]
+    env:
+      CHIP_MODULE_CACHE_DIR: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Build and test
+        run: ./scripts/ci_unit_tests.sh release llvm-22 --variant=translator
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ctest-logs-llvm-22-translator-release
+          path: build/Testing/**/LastTest*.log
+          if-no-files-found: ignore
+
+  unit-tests-llvm-22-translator-debug:
+    runs-on: [self-hosted, Linux, X64]
+    env:
+      CHIP_MODULE_CACHE_DIR: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Build and test
+        run: ./scripts/ci_unit_tests.sh debug llvm-22 --variant=translator
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ctest-logs-llvm-22-translator-debug
+          path: build/Testing/**/LastTest*.log
+          if-no-files-found: ignore
