@@ -6,14 +6,9 @@
 # Usage: ci_unit_tests.sh <debug|release> llvm-22 --variant=<native|translator>
 #
 # Required modules on the runner:
-#   llvm/22.0-<variant>
-#   HIP/chipStar/ci-llvm22-<variant>-<build_type>    (chipStar install matching
-#                                                     the LLVM variant+build type)
+#   llvm/22.0-native  (currently hard-coded; translator/debug variants pending)
+#   HIP-llvm22-retest/chipStar/2026.04.14
 #   oneapi/2025.0.4, level-zero/dgpu
-#
-# Runner admins: point the HIP/chipStar/ci-llvm22-* modules at a chipStar
-# install built from a recent main; the rocPRIM CI will rebuild rocPRIM
-# against it on every PR.
 
 set -e
 
@@ -59,7 +54,7 @@ fi
 module use ~/modulefiles
 module load oneapi/2025.0.4
 module load "llvm/22.0-${variant}"
-module load "HIP/chipStar/ci-llvm22-${variant}-${build_type_lc}"
+module load HIP-llvm22-retest/chipStar/2026.04.14
 module load level-zero/dgpu
 module list
 
