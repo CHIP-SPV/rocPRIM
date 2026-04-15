@@ -21,17 +21,41 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
       - name: Build and test
-        run: ./scripts/ci_unit_tests.sh release llvm-22 --variant=native
         shell: bash
+        run: |
+          set -e
+          if [ -f "$HOME/.local/init/bash" ]; then
+            export MODULESHOME=$HOME/.local
+            source "$MODULESHOME/init/bash"
+          elif [ -f /etc/profile.d/lmod.sh ]; then
+            source /etc/profile.d/lmod.sh
+          else
+            source /etc/profile.d/modules.sh
+          fi
+          module use ~/modulefiles
+          module load oneapi/2025.0.4
+          module load llvm/22.0-native
+          module load HIP-llvm22-retest/chipStar/2026.04.14
+          module load level-zero/dgpu
+          module list
+          rm -rf ~/.cache/chipStar build
+          cmake -S . -B build \
+            -DCMAKE_CXX_COMPILER="$(which hipcc)" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TEST=ON \
+            -DBUILD_BENCHMARK=OFF \
+            -DAMDGPU_TEST_TARGETS=""
+          cmake --build build -j 8
+          exclude=$(grep -Ev '^\s*(#|$)' .ci/exclude.txt | paste -sd '|' -)
+          cd build
+          if [ -n "$exclude" ]; then
+            ctest --output-on-failure --timeout 300 -L chip-spv-gpu -E "$exclude"
+          else
+            ctest --output-on-failure --timeout 300 -L chip-spv-gpu
+          fi
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: ctest-logs-llvm-22-native-release
           path: build/Testing/**/LastTest*.log
           if-no-files-found: ignore
-
-  # TODO: enable the other three variants once the runner has matching
-  # chipStar installs and modules:
-  #   HIP/chipStar/ci-llvm22-native-debug
-  #   HIP/chipStar/ci-llvm22-translator-release
-  #   HIP/chipStar/ci-llvm22-translator-debug
