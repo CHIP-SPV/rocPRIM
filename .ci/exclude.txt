@@ -13,3 +13,9 @@ rocprim\.device_reduce_by_key
 # retry). Upstream: https://github.com/intel/intel-graphics-compiler/issues/403
 # Mitigation: CHIP_L0_FORCE_SIMD16 or wait for IGC fix.
 rocprim\.device_run_length_encode
+
+# IGC bug #402 (fp16 subgroup-shuffle narrowing miscompile).
+# Upstream: https://github.com/intel/intel-graphics-compiler/issues/402
+# Fix pending in PR [CHIP-SPV/rocPRIM#3]; remove these two lines when #3 merges.
+rocprim\.warp_reduce
+rocprim\.warp_scan

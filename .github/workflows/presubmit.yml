@@ -1,4 +1,4 @@
-name: Presubmit (chipStar / Intel)
+name: Presubmit
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit-tests-llvm-22-native-release:
+  meatloaf-x64-intel:
     runs-on: [self-hosted, Linux, X64]
     env:
       CHIP_MODULE_CACHE_DIR: ""
@@ -20,7 +20,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
-      - name: Build and test
+      - name: Build and test (chip-spv-gpu)
         shell: bash
         run: |
           set -e
@@ -33,29 +33,101 @@ jobs:
             source /etc/profile.d/modules.sh
           fi
           module use /space/pvelesko/modulefiles
-          module load oneapi/2025.0.4
-          module load llvm/22.0-native
-          module load HIP/chipStar/main
-          module load level-zero/dgpu
+          module load oneapi/2025.0.4 llvm/22.0-native HIP/chipStar/main level-zero/dgpu
           module list
           rm -rf ~/.cache/chipStar build
           cmake -S . -B build \
             -DCMAKE_CXX_COMPILER="$(which hipcc)" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_TEST=ON \
-            -DBUILD_BENCHMARK=OFF \
+            -DBUILD_TEST=ON -DBUILD_BENCHMARK=OFF \
             -DAMDGPU_TEST_TARGETS=""
           cmake --build build -j 8
           exclude=$(grep -Ev '^\s*(#|$)' .ci/exclude.txt | paste -sd '|' -)
           cd build
-          if [ -n "$exclude" ]; then
-            ctest --output-on-failure --timeout 300 -L chip-spv-gpu -E "$exclude"
-          else
-            ctest --output-on-failure --timeout 300 -L chip-spv-gpu
-          fi
+          ctest --output-on-failure --timeout 300 -L chip-spv-gpu ${exclude:+-E "$exclude"}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: ctest-logs-llvm-22-native-release
+          name: ctest-logs-meatloaf
+          path: build/Testing/**/LastTest*.log
+          if-no-files-found: ignore
+
+  salami-arm64:
+    runs-on: [self-hosted, Linux, ARM64]
+    env:
+      CHIP_MODULE_CACHE_DIR: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Build and test (chip-spv-cpu)
+        shell: bash
+        run: |
+          set -e
+          if [ -f "$HOME/.local/init/bash" ]; then
+            export MODULESHOME=$HOME/.local
+            source "$MODULESHOME/init/bash"
+          elif [ -f /etc/profile.d/lmod.sh ]; then
+            source /etc/profile.d/lmod.sh
+          else
+            source /etc/profile.d/modules.sh
+          fi
+          module use ~/modulefiles
+          module load llvm/22.0-native HIP/chipStar/main
+          module list
+          rm -rf ~/.cache/chipStar build
+          cmake -S . -B build \
+            -DCMAKE_CXX_COMPILER="$(which hipcc)" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TEST=ON -DBUILD_BENCHMARK=OFF \
+            -DAMDGPU_TEST_TARGETS=""
+          cmake --build build -j 4
+          exclude=$(grep -Ev '^\s*(#|$)' .ci/exclude.txt | paste -sd '|' -)
+          cd build
+          ctest --output-on-failure --timeout 300 -L chip-spv-cpu ${exclude:+-E "$exclude"}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ctest-logs-salami
+          path: build/Testing/**/LastTest*.log
+          if-no-files-found: ignore
+
+  pastrami-macos:
+    runs-on: [self-hosted, ARM64, MacOS]
+    env:
+      CHIP_MODULE_CACHE_DIR: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Build and test (chip-spv-cpu)
+        shell: bash
+        run: |
+          set -e
+          if [ -f "$HOME/.local/init/bash" ]; then
+            export MODULESHOME=$HOME/.local
+            source "$MODULESHOME/init/bash"
+          elif [ -f /etc/profile.d/lmod.sh ]; then
+            source /etc/profile.d/lmod.sh
+          fi
+          module use ~/modulefiles
+          module load llvm/22.0-native HIP/chipStar/main
+          module list
+          rm -rf ~/.cache/chipStar build
+          cmake -S . -B build \
+            -DCMAKE_CXX_COMPILER="$(which hipcc)" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TEST=ON -DBUILD_BENCHMARK=OFF \
+            -DAMDGPU_TEST_TARGETS=""
+          cmake --build build -j 4
+          exclude=$(grep -Ev '^\s*(#|$)' .ci/exclude.txt | paste -sd '|' -)
+          cd build
+          ctest --output-on-failure --timeout 300 -L chip-spv-cpu ${exclude:+-E "$exclude"}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ctest-logs-pastrami
           path: build/Testing/**/LastTest*.log
           if-no-files-found: ignore
