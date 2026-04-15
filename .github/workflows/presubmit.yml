@@ -33,17 +33,9 @@ jobs:
             source /etc/profile.d/modules.sh
           fi
           module use /space/pvelesko/modulefiles
-          echo "=== which module command / type ==="
-          type module || true
-          echo "=== modulefile listing ==="
-          ls -la /space/pvelesko/modulefiles/HIP-llvm22-retest/chipStar/ || true
-          echo "=== module avail HIP-llvm22 ==="
-          module avail HIP-llvm22 2>&1 || true
-          echo "=== module avail (full) ==="
-          module avail 2>&1 | grep -i chipstar || true
           module load oneapi/2025.0.4
           module load llvm/22.0-native
-          module load HIP-llvm22-retest/chipStar/2026.04.14
+          module load HIP/chipStar/main
           module load level-zero/dgpu
           module list
           rm -rf ~/.cache/chipStar build
