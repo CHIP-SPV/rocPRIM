@@ -32,7 +32,7 @@ jobs:
           else
             source /etc/profile.d/modules.sh
           fi
-          module use ~/modulefiles
+          module use /space/pvelesko/modulefiles
           module load oneapi/2025.0.4
           module load llvm/22.0-native
           module load HIP-llvm22-retest/chipStar/2026.04.14
