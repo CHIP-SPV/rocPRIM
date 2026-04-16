@@ -24,3 +24,9 @@ rocprim\.warp_scan
 # sub-int warp_shuffle roundtrip addressed by PR [CHIP-SPV/rocPRIM#3]; remove
 # once the fp16 fix lands and is verified on CPU.
 rocprim\.block_shuffle
+
+# Mali GPU (salami) lacks fp64 + SubgroupDispatch SPIR-V capabilities.
+# These tests require hardware features the ARM Mali doesn't expose.
+rocprim\.thread_algos
+rocprim\.intrinsics
+rocprim\.warp_load
