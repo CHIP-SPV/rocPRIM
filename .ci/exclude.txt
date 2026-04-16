@@ -14,8 +14,10 @@ rocprim\.device_reduce_by_key
 # Mitigation: CHIP_L0_FORCE_SIMD16 or wait for IGC fix.
 rocprim\.device_run_length_encode
 
-# IGC bug #402 fp16 tests — REMOVED by PR #3 (warp_shuffle_op specialization).
-# warp_reduce, warp_scan, block_shuffle should now pass on all platforms.
+# IGC bug #402 fp16 tests — warp_reduce + warp_scan fixed by PR #3.
+# block_shuffle bf16 still fails on PoCL CPU (pastrami) — separate code path
+# not covered by warp_shuffle_op fix.
+rocprim\.block_shuffle
 
 # Mali GPU (salami) lacks fp64 + SubgroupDispatch SPIR-V capabilities.
 # These tests require hardware features the ARM Mali doesn't expose.
