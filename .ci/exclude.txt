@@ -1,0 +1,32 @@
+# CTest regex patterns (one per line) for tests excluded from CI.
+# Blank lines and '#' comments are ignored. Every entry should link to an
+# upstream issue — fix the test, don't register failures indefinitely.
+#
+# Source: /space/pvelesko/2026.04.14-lib-fixes/bug-summary.md (2026-04-14 sweep).
+
+# Pre-existing chipStar kernel-name lookup failure (not a rocPRIM bug).
+# Tracked in bug-summary.md §1 "test_device_reduce_by_key — unchanged —
+# pre-existing unrelated kernel-name lookup failure".
+rocprim\.device_reduce_by_key
+
+# IGC bug #403 (SIMD32 finalizer silently drops kernels after register-pressure
+# retry). Upstream: https://github.com/intel/intel-graphics-compiler/issues/403
+# Mitigation: CHIP_L0_FORCE_SIMD16 or wait for IGC fix.
+rocprim\.device_run_length_encode
+
+# IGC bug #402 (fp16 subgroup-shuffle narrowing miscompile).
+# Upstream: https://github.com/intel/intel-graphics-compiler/issues/402
+# Fix pending in PR [CHIP-SPV/rocPRIM#3]; remove these two lines when #3 merges.
+rocprim\.warp_reduce
+rocprim\.warp_scan
+
+# fp16/bf16 block_shuffle failures on PoCL CPU (pastrami). Related to the same
+# sub-int warp_shuffle roundtrip addressed by PR [CHIP-SPV/rocPRIM#3]; remove
+# once the fp16 fix lands and is verified on CPU.
+rocprim\.block_shuffle
+
+# Mali GPU (salami) lacks fp64 + SubgroupDispatch SPIR-V capabilities.
+# These tests require hardware features the ARM Mali doesn't expose.
+rocprim\.thread_algos
+rocprim\.intrinsics
+rocprim\.warp_load
