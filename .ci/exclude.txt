@@ -15,6 +15,7 @@ rocprim\.device_reduce_by_key
 rocprim\.device_run_length_encode
 
 # IGC bug #402 fp16 tests — warp_reduce + warp_scan fixed by PR #3.
+# https://github.com/intel/intel-graphics-compiler/issues/402
 # block_shuffle bf16 still fails on PoCL CPU (pastrami) — separate code path
 # not covered by warp_shuffle_op fix.
 rocprim\.block_shuffle
