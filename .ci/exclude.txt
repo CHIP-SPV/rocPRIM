@@ -14,15 +14,10 @@ rocprim\.device_reduce_by_key
 # Mitigation: CHIP_L0_FORCE_SIMD16 or wait for IGC fix.
 rocprim\.device_run_length_encode
 
-# IGC bug #402 (fp16 subgroup-shuffle narrowing miscompile).
-# Upstream: https://github.com/intel/intel-graphics-compiler/issues/402
-# Fix pending in PR [CHIP-SPV/rocPRIM#3]; remove these two lines when #3 merges.
-rocprim\.warp_reduce
-rocprim\.warp_scan
-
-# fp16/bf16 block_shuffle failures on PoCL CPU (pastrami). Related to the same
-# sub-int warp_shuffle roundtrip addressed by PR [CHIP-SPV/rocPRIM#3]; remove
-# once the fp16 fix lands and is verified on CPU.
+# IGC bug #402 fp16 tests — warp_reduce + warp_scan fixed by PR #3.
+# https://github.com/intel/intel-graphics-compiler/issues/402
+# block_shuffle bf16 still fails on PoCL CPU (pastrami) — separate code path
+# not covered by warp_shuffle_op fix.
 rocprim\.block_shuffle
 
 # Mali GPU (salami) lacks fp64 + SubgroupDispatch SPIR-V capabilities.

@@ -383,6 +383,7 @@ add_rocprim_test("rocprim.warp_reduce" test_warp_reduce.cpp)
 add_rocprim_test("rocprim.warp_scan" test_warp_scan.cpp)
 add_rocprim_test("rocprim.warp_sort" test_warp_sort.cpp)
 add_rocprim_test("rocprim.warp_store" test_warp_store.cpp)
+add_rocprim_test("rocprim.warp_shuffle_fp16" test_warp_shuffle_fp16.cpp)
 
 # GPU: 3/4 pass, TransformReduce fail.
 # CPU: likely stuck

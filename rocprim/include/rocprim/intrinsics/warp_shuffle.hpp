@@ -79,9 +79,53 @@ warp_shuffle_op(const T& input, ShuffleOp&& op)
 #endif
 }
 
+#if defined(__HIP_PLATFORM_SPIRV__) && !defined(__HIP_CPU_RT__)
+// Specialization for sub-int sized trivially-copyable types (e.g. __half).
+//
+// Works around an IGC miscompile on Intel Arc: the SPIR-V translator emits
+//
+//   %w = OpUConvert %uint %ushort_input      ; narrow -> wide
+//   %s = OpSubgroupShuffleINTEL %uint %w ...
+//   %n = OpUConvert %ushort %s               ; wide -> narrow
+//
+// and IGC miscompiles the post-shuffle narrowing UConvert when the consumer
+// lives in a block entered via OpBranchConditional (returns 0 instead of
+// the shuffled value). See upstream IGC issue (to be filed).
+//
+// We defeat the trigger by bouncing the shuffle result through a
+// memory-backed scratch slot and loading the low sizeof(T) bytes via a
+// byte-wise memcpy from a volatile pointer. This emits OpBitcast + OpLoad
+// of the narrow type instead of a scalar-register OpUConvert, which IGC
+// handles correctly.
 template<class T, class ShuffleOp>
 ROCPRIM_DEVICE ROCPRIM_INLINE
-typename std::enable_if<!(std::is_trivially_copyable<T>::value && (sizeof(T) % sizeof(int) == 0)), T>::type
+typename std::enable_if<
+    std::is_trivially_copyable<T>::value && (sizeof(T) < sizeof(int)), T>::type
+warp_shuffle_op(const T& input, ShuffleOp&& op)
+{
+    int word = 0; // zero-init upper bytes that the memcpy below leaves untouched
+    __builtin_memcpy(&word, &input, sizeof(T));
+    word = op(word);
+
+    // Store the shuffle result into a volatile stack slot to force the
+    // narrowing to happen via a memory load rather than a register-level
+    // i32->i16 trunc (which the translator lowers to OpUConvert).
+    volatile int word_scratch = word;
+    T output;
+    __builtin_memcpy(&output,
+                     const_cast<const int*>(&word_scratch),
+                     sizeof(T));
+    return output;
+}
+#endif
+
+template<class T, class ShuffleOp>
+ROCPRIM_DEVICE ROCPRIM_INLINE
+typename std::enable_if<!(std::is_trivially_copyable<T>::value && (sizeof(T) % sizeof(int) == 0))
+#if defined(__HIP_PLATFORM_SPIRV__) && !defined(__HIP_CPU_RT__)
+                        && !(std::is_trivially_copyable<T>::value && (sizeof(T) < sizeof(int)))
+#endif
+                        , T>::type
 warp_shuffle_op(const T& input, ShuffleOp&& op)
 {
     constexpr int words_no = (sizeof(T) + sizeof(int) - 1) / sizeof(int);
