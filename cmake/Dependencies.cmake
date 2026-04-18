@@ -187,7 +187,10 @@ if(NOT ROCM_FOUND)
       rocm-cmake
       URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/${rocm_cmake_tag}.tar.gz
     )
-    FetchContent_MakeAvailable(rocm-cmake)
+    FetchContent_GetProperties(rocm-cmake)
+    if(NOT rocm-cmake_POPULATED)
+      FetchContent_Populate(rocm-cmake)
+    endif()
   endif()
   find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH HINTS "${rocm-cmake_SOURCE_DIR}")
 else()
