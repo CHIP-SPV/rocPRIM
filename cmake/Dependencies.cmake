@@ -180,17 +180,28 @@ if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
   set(CMAKE_FIND_DEBUG_MODE FALSE)
 endif()
 if(NOT ROCM_FOUND)
-  if(NOT EXISTS "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src")
-    message(STATUS "ROCm CMake not found. Fetching...")
-    set(rocm_cmake_tag "master" CACHE STRING "rocm-cmake tag to download")
-    FetchContent_Declare(
-      rocm-cmake
-      URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/${rocm_cmake_tag}.tar.gz
-    )
-    FetchContent_GetProperties(rocm-cmake)
-    if(NOT rocm-cmake_POPULATED)
-      FetchContent_Populate(rocm-cmake)
-    endif()
+  message(STATUS "ROCm CMake not found. Fetching...")
+  set(rocm_cmake_tag "master" CACHE STRING "rocm-cmake tag to download")
+  FetchContent_Declare(
+    rocm-cmake
+    URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/${rocm_cmake_tag}.tar.gz
+  )
+  # FetchContent_Populate is idempotent on its own: it skips the network
+  # fetch once _deps/rocm-cmake-subbuild's stamp file shows it already ran,
+  # but it still sets rocm-cmake_SOURCE_DIR for this process every time,
+  # since that is a plain variable, not a cache entry, and does not survive
+  # between separate `cmake` invocations. Do not re-add the
+  # `if(NOT EXISTS "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src")` guard this
+  # used to have: it gated the whole block, including
+  # FetchContent_Populate, on the source dir already being absent, so on a
+  # configure of a build tree where rocm-cmake had already been fetched by
+  # an earlier run, rocm-cmake_SOURCE_DIR came back empty here and
+  # find_package below failed with "ROCMConfig.cmake ... not found" even
+  # though the file was sitting on disk exactly where FetchContent had left
+  # it.
+  FetchContent_GetProperties(rocm-cmake)
+  if(NOT rocm-cmake_POPULATED)
+    FetchContent_Populate(rocm-cmake)
   endif()
   find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH HINTS "${rocm-cmake_SOURCE_DIR}")
 else()
