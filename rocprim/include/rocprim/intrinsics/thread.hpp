@@ -41,7 +41,7 @@ BEGIN_ROCPRIM_NAMESPACE
 ROCPRIM_HOST_DEVICE inline
 constexpr unsigned int warp_size()
 {
-    return warpSize;
+    return ROCPRIM_DEVICE_WARP_SIZE;
 }
 
 /// \brief Returns a number of threads in a hardware warp for the actual device.
@@ -69,7 +69,7 @@ unsigned int host_warp_size()
 ROCPRIM_DEVICE ROCPRIM_INLINE
 constexpr unsigned int device_warp_size()
 {
-    return warpSize;
+    return ROCPRIM_DEVICE_WARP_SIZE;
 }
 
 /// \brief Returns flat size of a multidimensional block (tile).
