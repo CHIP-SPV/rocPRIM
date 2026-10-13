@@ -107,6 +107,13 @@
 #endif
 #define ROCPRIM_ARCH_90a 910
 
+#ifdef __HIP_PLATFORM_SPIRV__
+// warpSize is not constexpr on chipStar; it pins warp-synchronous kernels to this width.
+    #define ROCPRIM_DEVICE_WARP_SIZE CHIP_DEFAULT_WARP_SIZE
+#else
+    #define ROCPRIM_DEVICE_WARP_SIZE warpSize
+#endif
+
 /// Supported warp sizes
 #define ROCPRIM_WARP_SIZE_32 32u
 #define ROCPRIM_WARP_SIZE_64 64u

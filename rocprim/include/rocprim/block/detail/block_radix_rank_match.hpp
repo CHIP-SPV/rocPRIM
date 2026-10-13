@@ -52,7 +52,7 @@ class block_radix_rank_match
     static constexpr unsigned int block_size   = BlockSizeX * BlockSizeY * BlockSizeZ;
     static constexpr unsigned int radix_digits = 1 << RadixBits;
 
-    static constexpr unsigned int warp_size = warpSize;
+    static constexpr unsigned int warp_size = ROCPRIM_DEVICE_WARP_SIZE;
     // Force the number of warps to an uneven amount to reduce the number of lds bank conflicts.
     static constexpr unsigned int warps
         = ::rocprim::detail::ceiling_div(block_size, warp_size) | 1u;
