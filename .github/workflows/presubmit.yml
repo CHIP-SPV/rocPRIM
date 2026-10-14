@@ -106,6 +106,7 @@ jobs:
         shell: bash
         run: |
           set -e
+          export PATH="/opt/homebrew/bin:$PATH"
           source /opt/homebrew/Cellar/modules/5.6.0/init/bash
           module use ~/modulefiles
           module load llvm/22.0-native pocl HIP/chipStar/main
