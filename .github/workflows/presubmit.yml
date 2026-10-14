@@ -35,9 +35,15 @@ jobs:
           module use /space/pvelesko/modulefiles
           module load oneapi/2025.0.4 llvm/22.0-native HIP/chipStar/main level-zero/dgpu
           module list
+          # This install names a deleted CI staging dir; use copies of its config that name the install.
+          stale=$(sed -n 's/^HIP_PATH=//p' "$HIP_PATH/share/.hipInfo")
+          hip="$RUNNER_TEMP/chipstar-main"
+          rm -rf "$hip" && mkdir -p "$hip/bin" "$hip/share" "$hip/lib/cmake"
+          cp "$HIP_PATH/bin/hipcc" "$hip/bin/" && cp "$HIP_PATH/share/.hipInfo" "$hip/share/" && cp -r "$HIP_PATH/lib/cmake/hip" "$hip/lib/cmake/"
+          sed -i "s|$stale|$HIP_PATH|g" "$hip/share/.hipInfo" "$hip"/lib/cmake/hip/*.cmake
           rm -rf ~/.cache/chipStar build
           cmake -S . -B build \
-            -DCMAKE_CXX_COMPILER="$(which hipcc)" \
+            -DCMAKE_CXX_COMPILER="$hip/bin/hipcc" -Dhip_DIR="$hip/lib/cmake/hip" \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TEST=ON -DBUILD_BENCHMARK=OFF \
             -DAMDGPU_TEST_TARGETS="" \
