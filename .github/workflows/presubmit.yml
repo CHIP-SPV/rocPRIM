@@ -107,6 +107,8 @@ jobs:
         run: |
           set -e
           export PATH="/opt/homebrew/bin:$PATH"
+          # Without an explicit deployment target, clang's HIP driver asserts in Darwin::AddDeploymentTarget.
+          export MACOSX_DEPLOYMENT_TARGET=15.0
           source /opt/homebrew/Cellar/modules/5.6.0/init/bash
           module use ~/modulefiles
           module load llvm/22.0-native pocl HIP/chipStar/main
